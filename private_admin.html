@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotosphere Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f2f2f2;color:#1a1a1a;min-height:100vh}
+        .topbar{background:#1a1a1a;color:#fff;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+        .topbar h1{font-size:1.1rem;letter-spacing:3px;font-weight:900}
+        .topbar a{color:rgba(255,255,255,.5);font-size:.75rem;text-decoration:none}
+        .container{max-width:1100px;margin:0 auto;padding:1.5rem}
+        .tabs{display:flex;gap:.5rem;margin-bottom:1.5rem}
+        .tab{padding:.6rem 1.2rem;border-radius:50px;background:#fff;border:2px solid #e0e0e0;font-weight:700;font-size:.82rem;cursor:pointer;transition:all .15s}
+        .tab.act{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+        .card{background:#fff;border-radius:16px;border:1px solid #e0e0e0;padding:1.5rem;margin-bottom:1.5rem}
+        .card-title{font-size:1rem;font-weight:900;letter-spacing:1px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+        .btn{background:#1a1a1a;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:50px;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit}
+        .btn:hover{background:#333}
+        .btn-danger{background:#e53935}
+        .btn-sm{padding:.4rem .8rem;font-size:.7rem}
+        .btn-green{background:#4CAF50}
+        table{width:100%;border-collapse:collapse}
+        th,td{text-align:left;padding:.6rem .8rem;border-bottom:1px solid #f0f0f0;font-size:.78rem}
+        th{font-weight:800;color:#888;letter-spacing:1px;font-size:.65rem;text-transform:uppercase}
+        .frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:1rem}
+        .frame-item{background:#f8f8f8;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;text-align:center;position:relative}
+        .frame-item img{width:100%;aspect-ratio:9/16;object-fit:cover}
+        .frame-item-info{padding:.5rem;font-size:.7rem;font-weight:700}
+        .frame-item-del{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(229,57,53,.9);color:#fff;border:none;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center}
+        .upload-form{display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.5rem}
+        .upload-form label{font-size:.72rem;font-weight:700;color:#888;display:block;margin-bottom:3px}
+        .upload-form input[type=text]{padding:.5rem .8rem;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-weight:700;font-size:.82rem;width:200px}
+        .upload-form input[type=text]:focus{border-color:#1a1a1a;outline:none}
+        .upload-form input[type=file]{font-size:.75rem}
+        .voucher-row{display:flex;gap:.5rem;margin-bottom:1rem;align-items:flex-end}
+        .voucher-row .field{display:flex;flex-direction:column}
+        .voucher-row .field label{font-size:.65rem;font-weight:700;color:#888;margin-bottom:3px}
+        .voucher-row input{padding:.5rem .8rem;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-weight:700;font-size:.85rem}
+        .voucher-row input:focus{border-color:#1a1a1a;outline:none}
+        .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.6rem;font-weight:800}
+        .badge-green{background:#e8f5e9;color:#2e7d32}
+        .badge-orange{background:#fff3e0;color:#e65100}
+        .badge-gray{background:#f5f5f5;color:#666}
+        .panel{display:none}.panel.act{display:block}
+        .empty{text-align:center;color:#aaa;padding:2rem;font-size:.85rem}
+        .gen-code{font-family:monospace;font-size:1rem;font-weight:900;background:#f5f5f5;padding:.3rem .8rem;border-radius:6px;letter-spacing:2px}
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <h1>⚙️ FOTOSPHERE ADMIN</h1>
+        <a href="/">← Kembali ke App</a>
+    </div>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab act" onclick="switchTab('frames',this)">🖼️ Frames</div>
+            <div class="tab" onclick="switchTab('vouchers',this)">🎟️ Vouchers</div>
+            <div class="tab" onclick="switchTab('payments',this)">💳 Payments</div>
+            <div class="tab" onclick="switchTab('photos',this)">📸 Photos</div>
+        </div>
+
+        <!-- FRAMES -->
+        <div id="panel-frames" class="panel act">
+            <div class="card">
+                <div class="card-title">Upload Frame Baru</div>
+                <div class="upload-form" id="frame-upload-form">
+                    <div>
+                        <label>Nama Frame</label>
+                        <input type="text" id="frame-name" placeholder="Contoh: Kitten Frame">
+                    </div>
+                    <div>
+                        <label>File PNG (area transparan = slot foto)</label>
+                        <input type="file" id="frame-file" accept=".png">
+                    </div>
+                    <button class="btn" onclick="uploadFrame()">📤 Upload</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Frame Tersedia</div>
+                <div class="frame-grid" id="frame-list"></div>
+            </div>
+        </div>
+
+        <!-- VOUCHERS -->
+        <div id="panel-vouchers" class="panel">
+            <div class="card">
+                <div class="card-title">Buat Voucher</div>
+                <div class="voucher-row">
+                    <div class="field">
+                        <label>Kode Voucher</label>
+                        <input type="text" id="v-code" placeholder="Auto-generate jika kosong" style="width:220px">
+                    </div>
+                    <div class="field">
+                        <label>Jumlah Pakai</label>
+                        <input type="number" id="v-uses" value="1" min="1" style="width:80px">
+                    </div>
+                    <button class="btn" onclick="createVoucher()">+ Tambah</button>
+                    <button class="btn btn-green" onclick="generateVoucher()">🎲 Generate Unik</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Daftar Voucher</div>
+                <table>
+                    <thead><tr><th>Kode</th><th>Sisa Pakai</th><th>Dibuat</th><th></th></tr></thead>
+                    <tbody id="voucher-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAYMENTS -->
+        <div id="panel-payments" class="panel">
+            <div class="card">
+                <div class="card-title">Riwayat Pembayaran <button class="btn btn-sm" onclick="loadPayments()">🔄 Refresh</button></div>
+                <table>
+                    <thead><tr><th>Order ID</th><th>Metode</th><th>Jumlah</th><th>Status</th><th>Waktu</th></tr></thead>
+                    <tbody id="payment-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PHOTOS -->
+        <div id="panel-photos" class="panel">
+            <div class="card">
+                <div class="card-title">Riwayat Foto <button class="btn btn-sm" onclick="loadPhotos()">🔄 Refresh</button></div>
+                <table>
+                    <thead><tr><th>Session</th><th>Frame</th><th>Filter</th><th>Foto</th><th>Waktu</th><th>Strip</th></tr></thead>
+                    <tbody id="photo-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(name, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('act'));
+            el.classList.add('act');
+            document.getElementById('panel-' + name).classList.add('act');
+            if (name === 'frames') loadFrames();
+            if (name === 'vouchers') loadVouchers();
+            if (name === 'payments') loadPayments();
+            if (name === 'photos') loadPhotos();
+        }
+
+        // ═══ FRAMES ═══
+        async function loadFrames() {
+            const r = await fetch('/api/admin/frames');
+            const frames = await r.json();
+            const g = document.getElementById('frame-list');
+            if (!frames.length) { g.innerHTML = '<div class="empty">Belum ada frame. Upload PNG di atas.</div>'; return; }
+            g.innerHTML = frames.map(f => `
+                <div class="frame-item">
+                    <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
+                    <img src="/frames/${f.file}" alt="${f.name}">
+                    <div class="frame-item-info">${f.name} · ${f.photos} foto</div>
+                </div>
+            `).join('');
+        }
+
+        async function uploadFrame() {
+            const fileInput = document.getElementById('frame-file');
+            const nameInput = document.getElementById('frame-name');
+            if (!fileInput.files[0]) return alert('Pilih file PNG');
+            
+            const customName = nameInput.value.trim();
+            const fd = new FormData();
+            fd.append('frame', fileInput.files[0]);
+            if (customName) fd.append('name', customName);
+            
+            const r = await fetch('/api/admin/frames/upload', { method: 'POST', body: fd });
+            const d = await r.json();
+            alert(`Frame "${d.name}" berhasil di-upload!\n${d.slots_detected} slot foto terdeteksi.`);
+            fileInput.value = ''; nameInput.value = '';
+            loadFrames();
+        }
+
+        async function deleteFrame(fname) {
+            if (!confirm('Hapus frame ' + fname + '?')) return;
+            await fetch('/api/admin/frames/' + fname, { method: 'DELETE' });
+            loadFrames();
+        }
+
+        // ═══ VOUCHERS ═══
+        async function loadVouchers() {
+            const r = await fetch('/api/admin/vouchers');
+            const vouchers = await r.json();
+            const tb = document.getElementById('voucher-list');
+            const entries = Object.entries(vouchers);
+            if (!entries.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Belum ada voucher</td></tr>'; return; }
+            tb.innerHTML = entries.map(([code, v]) => `
+                <tr>
+                    <td><span class="gen-code">${code}</span></td>
+                    <td><span class="badge ${v.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${v.uses_left}x</span></td>
+                    <td>${v.created_at || '-'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteVoucher('${code}')">Hapus</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function createVoucher() {
+            const code = document.getElementById('v-code').value.trim();
+            const uses = parseInt(document.getElementById('v-uses').value) || 1;
+            if (!code) return alert('Masukkan kode, atau gunakan tombol Generate Unik');
+            await fetch('/api/admin/vouchers', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ code, uses })
+            });
+            document.getElementById('v-code').value = '';
+            loadVouchers();
+        }
+
+        async function generateVoucher() {
+            const uses = parseInt(document.getElementById('v-uses').value) || 1;
+            const r = await fetch('/api/admin/vouchers/generate', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ uses })
+            });
+            const d = await r.json();
+            alert(`Voucher berhasil dibuat!\n\nKode: ${d.code}\nPakai: ${d.uses}x`);
+            loadVouchers();
+        }
+
+        async function deleteVoucher(code) {
+            if (!confirm('Hapus voucher ' + code + '?')) return;
+            await fetch('/api/admin/vouchers/' + code, { method: 'DELETE' });
+            loadVouchers();
+        }
+
+        // ═══ PAYMENTS ═══
+        async function loadPayments() {
+            const r = await fetch('/api/admin/payments');
+            const payments = await r.json();
+            const tb = document.getElementById('payment-list');
+            if (!payments.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>'; return; }
+            tb.innerHTML = payments.reverse().map(p => `
+                <tr>
+                    <td style="font-size:.65rem">${p.order_id}</td>
+                    <td>${p.method}</td>
+                    <td>IDR ${p.amount.toLocaleString()}</td>
+                    <td><span class="badge ${p.status==='paid'?'badge-green':'badge-orange'}">${p.status}</span></td>
+                    <td style="font-size:.65rem">${p.created_at}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ═══ PHOTOS ═══
+        async function loadPhotos() {
+            const r = await fetch('/api/admin/photos');
+            const photos = await r.json();
+            const tb = document.getElementById('photo-list');
+            if (!photos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Belum ada foto</td></tr>'; return; }
+            tb.innerHTML = photos.reverse().map(p => `
+                <tr>
+                    <td style="font-size:.6rem">${p.session_id.substring(0,8)}...</td>
+                    <td>${p.frame}</td>
+                    <td>${p.filter}</td>
+                    <td>${p.photos}</td>
+                    <td style="font-size:.65rem">${p.created_at}</td>
+                    <td><a href="${p.strip_url}" target="_blank" class="btn btn-sm">Lihat</a></td>
+                </tr>
+            `).join('');
+        }
+
+        loadFrames();
+    </script>
+</body>
+</html>
