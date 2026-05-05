@@ -196,9 +196,13 @@ async def api_upload_photos(
             print(f"Upload photo {idx} error: {e}")
             urls.append("")
 
-    SESSION_STORE[session_id]["photos"] = saved
-    update_session(session_id, photo_urls=urls, frame_choice=frame_id, mirror=mirror)
-    return {"success": True, "uploaded": len(saved)}
+    try:
+        SESSION_STORE[session_id]["photos"] = saved
+        update_session(session_id, photo_urls=urls, frame_choice=frame_id, mirror=mirror)
+        return {"success": True, "uploaded": len(saved)}
+    except Exception as e:
+        print(f"Update session error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 @app.get("/api/session/{session_id}/preview")
 def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int = 0):
