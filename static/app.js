@@ -191,7 +191,7 @@ async function claimVoucher() {
                 total: 'GRATIS (Voucher)'
             }, () => { startTimer(); goToFrame(); });
         } else {
-            alert('Voucher tidak valid');
+            alert('Gagal: ' + (d.error || 'Voucher tidak valid'));
         }
     } catch (e) { noloader(); alert('Error: ' + e.message); }
 }

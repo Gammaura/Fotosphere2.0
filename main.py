@@ -149,26 +149,39 @@ def api_get_config():
 
 @app.post("/api/voucher/claim")
 async def api_claim_voucher(request: Request):
-    body = await request.json()
-    code = body.get("code", "").strip().upper()
-    if code in VOUCHER_CODES:
-        v = VOUCHER_CODES[code]
-        if v.get("uses_left", 0) > 0:
-            v["uses_left"] -= 1
-            save_vouchers()
-            session_id = str(uuid.uuid4())
-            order_id = f"VOUCHER-{code}"
-            create_session(session_id, order_id)
-            SESSION_STORE[session_id] = {
-                "order_id": order_id, "photos": [], "frame_id": None, "mirror": False
-            }
-            PAYMENT_HISTORY.append({
-                "order_id": order_id, "session_id": session_id,
-                "amount": 0, "method": "Voucher",
-                "status": "paid", "created_at": datetime.utcnow().isoformat()
-            })
-            return {"valid": True, "session_id": session_id}
-    return {"valid": False}
+    try:
+        body = await request.json()
+        code = body.get("code", "").strip().upper()
+        if code in VOUCHER_CODES:
+            v = VOUCHER_CODES[code]
+            if v.get("uses_left", 0) > 0:
+                session_id = str(uuid.uuid4())
+                order_id = f"VOUCHER-{code}"
+                
+                # Try create session in DB first
+                try:
+                    create_session(session_id, order_id)
+                except Exception as db_err:
+                    print(f"DB Error creating session: {db_err}")
+                    return {"valid": False, "error": f"Database error: {str(db_err)}"}
+                
+                # Only decrease count if DB creation succeeded
+                v["uses_left"] -= 1
+                save_vouchers()
+                
+                SESSION_STORE[session_id] = {
+                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False
+                }
+                PAYMENT_HISTORY.append({
+                    "order_id": order_id, "session_id": session_id,
+                    "amount": 0, "method": "Voucher",
+                    "status": "paid", "created_at": datetime.utcnow().isoformat()
+                })
+                return {"valid": True, "session_id": session_id}
+        return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
+    except Exception as e:
+        print(f"Voucher claim error: {e}")
+        return {"valid": False, "error": str(e)}
 
 # ─── SESSION ──────────────────────────────────────────────
 
