@@ -50,6 +50,7 @@ def load_vouchers():
         with open(VOUCHER_FILE, 'r') as f:
             VOUCHER_CODES = json.load(f)
 def save_vouchers():
+    os.makedirs(os.path.dirname(VOUCHER_FILE), exist_ok=True)
     with open(VOUCHER_FILE, 'w') as f:
         json.dump(VOUCHER_CODES, f, indent=2)
 load_vouchers()
