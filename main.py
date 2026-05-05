@@ -42,7 +42,8 @@ PHOTO_HISTORY = []
 VOUCHER_CODES = {}  # code -> {uses_left, created_at}
 
 # Load vouchers from file if exists
-VOUCHER_FILE = "vouchers.json"
+VOUCHER_FILE = "static/vouchers.json"
+TICKET_FILE = "static/tickets.json"
 def load_vouchers():
     global VOUCHER_CODES
     if os.path.exists(VOUCHER_FILE):
@@ -382,7 +383,7 @@ def admin_page(request: Request):
 
 # ─── TICKET VALIDATION ───
 TICKET_CODES = {}
-TICKET_FILE = "tickets.json"
+TICKET_FILE = "static/tickets.json"
 def load_tickets():
     global TICKET_CODES
     if os.path.exists(TICKET_FILE):
