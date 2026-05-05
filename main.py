@@ -156,11 +156,13 @@ async def api_claim_voucher(request: Request):
             v["uses_left"] -= 1
             save_vouchers()
             session_id = str(uuid.uuid4())
+            order_id = f"VOUCHER-{code}"
+            create_session(session_id, order_id)
             SESSION_STORE[session_id] = {
-                "order_id": f"VOUCHER-{code}", "photos": [], "frame_id": None, "mirror": False
+                "order_id": order_id, "photos": [], "frame_id": None, "mirror": False
             }
             PAYMENT_HISTORY.append({
-                "order_id": f"VOUCHER-{code}", "session_id": session_id,
+                "order_id": order_id, "session_id": session_id,
                 "amount": 0, "method": "Voucher",
                 "status": "paid", "created_at": datetime.utcnow().isoformat()
             })
