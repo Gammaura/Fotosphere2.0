@@ -88,9 +88,6 @@ def sync_from_supabase():
     except Exception as e:
         print(f"Sync error: {e}")
     return 0
-    except Exception as e:
-        print(f"Sync error: {e}")
-    return 0
 
 VOUCHER_CODES = {}  # code -> {uses_left, created_at}
 
