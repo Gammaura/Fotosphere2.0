@@ -23,3 +23,19 @@ INFO:     Finished server process [35512]
 INFO:     Started server process [38953]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [38953]
+INFO:     Started server process [40535]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40535]
+INFO:     Started server process [40598]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

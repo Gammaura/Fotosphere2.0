@@ -376,8 +376,10 @@ def download_page(session_id: str, request: Request):
                     break
             photo_urls = [f"{base_path}/photo_{i}.png" for i in range(photos_count)]
     
-    base = str(request.base_url)
-    def p(u, f): return f"{base}api/download-proxy?url={u}&filename={f}"
+    import urllib.parse
+    def p(u, f): 
+        safe_url = urllib.parse.quote(u, safe='')
+        return f"/api/download-proxy?url={safe_url}&filename={f}"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -411,15 +413,15 @@ def download_page(session_id: str, request: Request):
             
             <h2>📸 HASIL STRIP</h2>
             <img src="{strip_url}" alt="Strip">
-            <a href="{p(strip_url, 'fotosphere_strip.png')}" class="btn btn-pink">UNDUH HASIL STRIP</a>
+            <a href="{p(strip_url, 'fotosphere_strip.png')}" download="fotosphere_strip.png" class="btn btn-pink">UNDUH HASIL STRIP</a>
 
             <h2>✨ LIVE PHOTO <span class="live-badge">Bergerak</span></h2>
             <img src="{gif_url}" alt="Live Photo">
-            <a href="{p(gif_url, 'fotosphere_live.gif')}" class="btn">UNDUH LIVE PHOTO</a>
+            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH LIVE PHOTO</a>
 
             <h2>🎞️ FOTO ORIGINAL</h2>
             <div class="grid">
-                {"".join([f'<div><img src="{u}" alt="Photo {i+1}"><a href="{p(u, f"foto_{i+1}.png")}" class="btn" style="padding: 12px; font-size: 0.8rem;">FOTO {i+1}</a></div>' for i, u in enumerate(photo_urls)])}
+                {"".join([f'<div><img src="{u}" alt="Photo {i+1}"><a href="{p(u, f"foto_{i+1}.png")}" download="foto_{i+1}.png" class="btn" style="padding: 12px; font-size: 0.8rem;">FOTO {i+1}</a></div>' for i, u in enumerate(photo_urls)])}
             </div>
             
             <div class="footer">FOTOSPHERE © 2026 • self-photobox system</div>
