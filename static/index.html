@@ -6,7 +6,7 @@
     <title>Fotosphere · Self Photo Studio</title>
     <link rel="icon" href="assets/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -149,7 +149,7 @@
     <!-- ═══════════════ FRAME SELECT (NO BACK BUTTON) ═══════════════ -->
     <section id="screen-frame" class="screen">
         <div class="splitPage">
-            <div class="timerPill tr" id="frame-timer">05:00</div>
+            <div class="timerPill tr" id="frame-timer">10:00</div>
             <!-- LEFT: frame grid -->
             <div class="splitLeft">
                 <div class="borderedCard">
@@ -176,7 +176,7 @@
     <section id="screen-shoot" class="screen">
         <div class="splitPage shootPage">
             <button class="backBtn dark tl" onclick="backToFrame()"></button>
-            <div class="timerPill tr" id="shoot-timer">04:59</div>
+            <div class="timerPill tr" id="shoot-timer">10:00</div>
             <!-- LEFT: camera + buttons underneath -->
             <div class="splitLeft camCol">
                 <div class="camCard">
@@ -224,7 +224,7 @@
     <section id="screen-filter" class="screen">
         <div class="splitPage">
             <button class="backBtn dark tl" onclick="show('shoot')"></button>
-            <div class="timerPill tr" id="filter-timer">04:30</div>
+            <div class="timerPill tr" id="filter-timer">10:00</div>
             <!-- LEFT: filter grid with preview thumbnails -->
             <div class="splitLeft">
                 <div class="borderedCard">
@@ -238,12 +238,26 @@
                     <div class="prevBody" id="filter-prev-body">
                         <img id="prev-img" src="" alt="">
                         <div id="prev-spin" class="spin" style="display:none"></div>
+                        <!-- Emoji Overlay -->
+                        <div id="emoji-overlay" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
                     </div>
                     <div class="prevFoot">
-                        <span id="filter-frame-name">Frame</span>
+                        <button class="btn-dark-sm" onclick="toggleEmojiDrawer()" style="padding: 6px 14px; font-size: 0.7rem; margin-right: 8px;">✨ Stickers</button>
+                        <span id="filter-frame-name" style="flex:1; text-align:center;">Frame</span>
                         <button class="arrowBtn" onclick="finalizeStrip()">Cetak Sekarang <span class="arrowCircle">›</span></button>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Emoji Drawer -->
+        <div id="emoji-drawer" class="emojiDrawer">
+            <div class="emojiDrawerHead">
+                <span>Pilih Stiker Lucu</span>
+                <button onclick="toggleEmojiDrawer()" style="background:none; border:none; color:#fff; font-weight:bold; font-size:1.2rem; cursor:pointer;">×</button>
+            </div>
+            <div class="emojiGrid" id="emoji-grid">
+                <!-- Emojis populated via JS -->
             </div>
         </div>
     </section>
@@ -283,6 +297,6 @@
         <div id="loader-msg" class="loaderMsg">MEMPROSES...</div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 </html>

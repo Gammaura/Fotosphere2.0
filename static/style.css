@@ -144,12 +144,12 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .slotNumber{font-size:.55rem;font-weight:900;color:#ccc}
 
 /* ═══════════════ FILTER ═══════════════ */
-.filterGrid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px;overflow-y:auto;align-content:start}
-.fltItem{aspect-ratio:3/4;background:#e8e8e8;border-radius:10px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;border:3px solid transparent;max-height:160px}
-.fltItem:hover{transform:scale(.97)}
-.fltItem.sel{border-color:var(--dark);box-shadow:0 0 0 2px var(--dark)}
-.fltItem img{width:100%;height:100%;object-fit:cover;border-radius:7px}
-.fltName{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));color:#fff;font-size:.55rem;font-weight:800;padding:6px 4px 5px;text-align:center;letter-spacing:.5px}
+.filterGrid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px;overflow-y:auto;align-content:start}
+.fltItem{aspect-ratio:16/9;background:linear-gradient(135deg,#fff,#f5f5f5);border-radius:12px;cursor:pointer;transition:all .2s;border:2.5px solid var(--bdr);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.fltItem:hover{transform:scale(.97);border-color:#aaa}
+.fltItem.sel{border-color:var(--dark);background:var(--dark);color:#fff}
+.fltBox{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.fltName{font-size:.8rem;font-weight:800;text-align:center;letter-spacing:1px;color:inherit}
 .spin{width:32px;height:32px;border:4px solid var(--bdr);border-top-color:var(--dark);border-radius:50%;animation:sp .7s linear infinite;position:absolute}
 @keyframes sp{to{transform:rotate(360deg)}}
 
@@ -198,3 +198,14 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .fc-empty .fcThumb::after{content:'🖼️';font-size:1.5rem}
 .emptyFrameMsg{text-align:center;padding:2rem;color:#aaa;font-size:.82rem;font-weight:600}
 
+/* ═══════════════ EMOJI DRAWER ═══════════════ */
+.emojiDrawer{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-top:3px solid var(--dark);border-radius:24px 24px 0 0;z-index:50;transform:translateY(100%);transition:transform .3s cubic-bezier(0.4, 0, 0.2, 1);max-height:40%;display:flex;flex-direction:column}
+.emojiDrawer.open{transform:translateY(0)}
+.emojiDrawerHead{background:var(--pink);color:#fff;padding:12px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center;border-radius:20px 20px 0 0}
+.emojiGrid{display:grid;grid-template-columns:repeat(auto-fill, minmax(50px, 1fr));gap:10px;padding:15px;overflow-y:auto}
+.emjBtn{font-size:2rem;background:none;border:none;cursor:pointer;transition:transform .1s}
+.emjBtn:active{transform:scale(0.8)}
+.draggable-emoji{position:absolute;font-size:3rem;pointer-events:auto;cursor:grab;user-select:none;line-height:1;transform:translate(-50%, -50%)}
+.draggable-emoji:active{cursor:grabbing}
+.draggable-emoji .del-btn{position:absolute;top:-10px;right:-10px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;border:none}
+.draggable-emoji:hover .del-btn{opacity:1}

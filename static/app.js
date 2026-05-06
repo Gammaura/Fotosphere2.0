@@ -48,22 +48,23 @@ async function init() {
 init();
 
 // ─── SESSION TIMER ───
-let _sT = null, _sL = 300;
+let _sT = null, _sL = 600;
 function startTimer() {
-    _sL = 300; updTimers();
+    _sL = 600; updTimers();
     if (_sT) clearInterval(_sT);
     _sT = setInterval(() => { _sL--; updTimers(); if (_sL <= 0) { clearInterval(_sT); goHome(); alert('Sesi habis!'); } }, 1000);
 }
 function stopTimer() { if (_sT) { clearInterval(_sT); _sT = null; } }
 function updTimers() {
-    const t = `${String(Math.floor(_sL/60)).padStart(2,'0')}.${String(_sL%60).padStart(2,'0')}`;
-    ['frame-timer','shoot-timer','filter-timer'].forEach(id => { const e = $(id); if (e) e.textContent = t; });
+    const t = `${String(Math.floor(_sL / 60)).padStart(2, '0')}.${String(_sL % 60).padStart(2, '0')}`;
+    ['frame-timer', 'shoot-timer', 'filter-timer'].forEach(id => { const e = $(id); if (e) e.textContent = t; });
 }
 
 // ═══════════ HOME ═══════════
 function goHome() {
     stopCam(); stopTimer(); clearPay(); stopTicketScan();
     S.sid = null; S.oid = null; S.frame = null; S.filter = 'Natural'; S.photos = []; S.slot = 0;
+    const ov = $('emoji-overlay'); if (ov) ov.innerHTML = '';
     show('home');
 }
 
@@ -124,7 +125,7 @@ async function goScanTicket() {
                     console.error('Ticket validation error:', e);
                 }
             },
-            () => {} // ignore errors (no QR found yet)
+            () => { } // ignore errors (no QR found yet)
         );
     } catch (e) {
         console.error('Scanner start error:', e);
@@ -133,8 +134,8 @@ async function goScanTicket() {
 
 function stopTicketScan() {
     if (_scanner) {
-        try { _scanner.stop().catch(() => {}); } catch (_) {}
-        try { _scanner.clear(); } catch (_) {}
+        try { _scanner.stop().catch(() => { }); } catch (_) { }
+        try { _scanner.clear(); } catch (_) { }
         _scanner = null;
     }
 }
@@ -166,7 +167,7 @@ async function goQRIS() {
                         total: 'IDR 30.000'
                     }, () => { startTimer(); goToFrame(); });
                 }
-            } catch (_) {}
+            } catch (_) { }
         }, 3000);
     } catch (e) { noloader(); alert('Gagal: ' + e.message); }
 }
@@ -181,7 +182,7 @@ async function claimVoucher() {
     if (!code) return alert('Masukkan kode voucher');
     loader('MEMVERIFIKASI...');
     try {
-        const r = await fetch('/api/voucher/claim', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({code}) });
+        const r = await fetch('/api/voucher/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
         const d = await r.json(); noloader();
         if (d.valid) {
             S.sid = d.session_id;
@@ -199,15 +200,15 @@ async function claimVoucher() {
 // ═══════════════════════════════════════════════════════════
 // FRAME SELECT — dummy placeholders when empty
 // ═══════════════════════════════════════════════════════════
-async function goToFrame() { 
+async function goToFrame() {
     loader('MEMUAT FRAME...');
     try { const r = await fetch('/api/config'); const d = await r.json(); S.frames = d.frames; S.filters = d.filters; } catch (e) { console.error(e); }
     noloader();
-    
+
     // Ensure selected frame still exists
     if (S.frame && !S.frames.find(f => f.id === S.frame.id)) { S.frame = null; }
-    
-    renderFrames(); updateFramePreview(); show('frame'); 
+
+    renderFrames(); updateFramePreview(); show('frame');
 }
 
 function renderFrames() {
@@ -285,7 +286,7 @@ function updateCropGuide() {
     const cardW = camCard.offsetWidth;
     const cardH = camCard.offsetHeight;
     const vid = $('cam-vid');
-    const vidRatio = vid.videoWidth / vid.videoHeight || (16/9);
+    const vidRatio = vid.videoWidth / vid.videoHeight || (16 / 9);
     const cardRatio = cardW / cardH;
 
     // The camera fills the card with object-fit:cover
@@ -360,9 +361,9 @@ function updateShootPreview() {
             content = `<img src="${URL.createObjectURL(S.photos[i])}">`;
             content += `<button class="retakeBtn" onclick="retakeSlot(${i})">Retake</button>`;
         } else if (isActive) {
-            content = `<div style="width:100%;height:100%;background:rgba(233,30,99,.06);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--pink);font-size:.7rem">${i+1}</span></div>`;
+            content = `<div style="width:100%;height:100%;background:rgba(233,30,99,.06);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--pink);font-size:.7rem">${i + 1}</span></div>`;
         } else {
-            content = `<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span class="slotNumber">${i+1}</span></div>`;
+            content = `<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span class="slotNumber">${i + 1}</span></div>`;
         }
 
         html += `<div class="slotWrap${isActive ? ' slotActive' : ''}" style="left:${left}%;top:${top}%;width:${w}%;height:${h}%">${content}</div>`;
@@ -477,25 +478,108 @@ async function goToFilter() {
 }
 
 function renderFilters() {
-    const g = $('filter-grid'); g.innerHTML = '';
-    S.filters.forEach(f => {
-        const c = document.createElement('div');
-        c.className = 'fltItem' + (S.filter === f.name ? ' sel' : '');
-        const url = `/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(f.name)}&thumb=1&_=${Date.now()}`;
-        c.innerHTML = `<img src="${url}" alt="${f.name}" loading="lazy"><div class="fltName">${f.name}</div>`;
-        c.onclick = () => { S.filter = f.name; renderFilters(); loadPreview(); };
-        g.appendChild(c);
-    });
+    const g = $('filter-grid');
+    if (g.children.length === 0) {
+        S.filters.forEach(f => {
+            const c = document.createElement('div');
+            c.className = 'fltItem' + (S.filter === f.name ? ' sel' : '');
+            c.dataset.name = f.name;
+            c.innerHTML = `<div class="fltBox"><div class="fltName">${f.name}</div></div>`;
+            c.onclick = () => {
+                S.filter = f.name;
+                renderFilters();
+                loadPreview();
+            };
+            g.appendChild(c);
+        });
+    } else {
+        Array.from(g.children).forEach(c => {
+            if (c.dataset.name === S.filter) c.classList.add('sel');
+            else c.classList.remove('sel');
+        });
+    }
 }
 
 function loadPreview() {
     const img = $('prev-img'), spin = $('prev-spin');
     img.style.opacity = '.3'; spin.style.display = 'block';
-    const url = `/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(S.filter)}&_=${Date.now()}`;
+    const url = `/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(S.filter)}`;
     const t = new Image();
     t.onload = () => { img.src = url; img.style.opacity = '1'; spin.style.display = 'none'; };
     t.onerror = () => { spin.style.display = 'none'; img.style.opacity = '1'; };
     t.src = url;
+}
+
+// ═══════════════════════════════════════════════════════════
+// EMOJIS / STICKERS
+// ═══════════════════════════════════════════════════════════
+const EMOJIS = ['💖', '✨', '🌸', '🎀', '🦋', '🧸', '🍓', '🍒', '🎈', '👑', '🐱', '🐰', '🐻', '💕', '🥳', '🔥', '⭐', '🥑', '🍄', '🌈'];
+
+function toggleEmojiDrawer() {
+    const d = $('emoji-drawer');
+    if (!d.classList.contains('open')) {
+        const g = $('emoji-grid');
+        if (g.children.length === 0) {
+            EMOJIS.forEach(e => {
+                const btn = document.createElement('button');
+                btn.className = 'emjBtn';
+                btn.textContent = e;
+                btn.onclick = () => addSticker(e);
+                g.appendChild(btn);
+            });
+        }
+        d.classList.add('open');
+    } else {
+        d.classList.remove('open');
+    }
+}
+
+function addSticker(char) {
+    toggleEmojiDrawer();
+    const ov = $('emoji-overlay');
+    const el = document.createElement('div');
+    el.className = 'draggable-emoji';
+    el.innerHTML = `${char}<button class="del-btn" onclick="this.parentElement.remove()">×</button>`;
+
+    const rect = ov.getBoundingClientRect();
+    let x = rect.width / 2;
+    let y = rect.height / 2;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+
+    ov.appendChild(el);
+
+    let isDragging = false;
+    let startX, startY, initialX, initialY;
+
+    const dragStart = (e) => {
+        if (e.target.classList.contains('del-btn')) return;
+        isDragging = true;
+        const pt = e.touches ? e.touches[0] : e;
+        startX = pt.clientX;
+        startY = pt.clientY;
+        initialX = el.offsetLeft;
+        initialY = el.offsetTop;
+        e.preventDefault();
+    };
+
+    const dragMove = (e) => {
+        if (!isDragging) return;
+        const pt = e.touches ? e.touches[0] : e;
+        const dx = pt.clientX - startX;
+        const dy = pt.clientY - startY;
+        el.style.left = (initialX + dx) + 'px';
+        el.style.top = (initialY + dy) + 'px';
+    };
+
+    const dragEnd = () => { isDragging = false; };
+
+    el.addEventListener('mousedown', dragStart);
+    el.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('touchmove', dragMove, { passive: false });
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -504,6 +588,57 @@ function loadPreview() {
 async function finalizeStrip() {
     loader('MENCETAK STRIP...');
     const fd = new FormData(); fd.append('filter_name', S.filter);
+
+    // Capture stickers
+    const ov = $('emoji-overlay');
+    const emojis = ov.querySelectorAll('.draggable-emoji');
+    if (emojis.length > 0) {
+        const img = $('prev-img');
+        const imgRect = img.getBoundingClientRect();
+
+        const cvs = document.createElement('canvas');
+        cvs.width = img.naturalWidth;
+        cvs.height = img.naturalHeight;
+        const ctx = cvs.getContext('2d');
+
+        const rRatio = img.naturalWidth / img.naturalHeight;
+        const dRatio = imgRect.width / imgRect.height;
+
+        let drawW, drawH, offsetX, offsetY;
+        if (dRatio > rRatio) {
+            drawH = imgRect.height;
+            drawW = drawH * rRatio;
+            offsetX = (imgRect.width - drawW) / 2;
+            offsetY = 0;
+        } else {
+            drawW = imgRect.width;
+            drawH = drawW / rRatio;
+            offsetX = 0;
+            offsetY = (imgRect.height - drawH) / 2;
+        }
+
+        const scale = img.naturalWidth / drawW;
+
+        emojis.forEach(e => {
+            const char = e.childNodes[0].nodeValue;
+            const eRect = e.getBoundingClientRect();
+            const cx = eRect.left + eRect.width / 2 - imgRect.left;
+            const cy = eRect.top + eRect.height / 2 - imgRect.top;
+
+            const nx = (cx - offsetX) * scale;
+            const ny = (cy - offsetY) * scale;
+            const nSize = 48 * scale;
+
+            ctx.font = `${nSize}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(char, nx, ny);
+        });
+
+        const blob = await new Promise(r => cvs.toBlob(r, 'image/png'));
+        fd.append('sticker_overlay', blob, 'stickers.png');
+    }
+
     try {
         const r = await fetch(`/api/session/${S.sid}/finalize`, { method: 'POST', body: fd });
         if (!r.ok) throw new Error('Finalize failed');

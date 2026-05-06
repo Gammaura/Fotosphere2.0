@@ -244,7 +244,12 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
     return Response(content=pil_to_bytes(result, fmt), media_type=f"image/{fmt.lower()}")
 
 @app.post("/api/session/{session_id}/finalize")
-def api_finalize_strip(request: Request, session_id: str, filter_name: str = Form(...)):
+async def api_finalize_strip(
+    request: Request, 
+    session_id: str, 
+    filter_name: str = Form(...),
+    sticker_overlay: Optional[UploadFile] = File(None)
+):
     if session_id not in SESSION_STORE or not SESSION_STORE[session_id]["photos"]:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -258,6 +263,18 @@ def api_finalize_strip(request: Request, session_id: str, filter_name: str = For
     photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
     slots = detect_transparent_slots(frame_path)
     result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
+
+    if sticker_overlay:
+        try:
+            overlay_bytes = await sticker_overlay.read()
+            overlay_img = Image.open(io.BytesIO(overlay_bytes)).convert("RGBA")
+            overlay_img = overlay_img.resize(result.size, Image.LANCZOS)
+            result = result.convert("RGBA")
+            result = Image.alpha_composite(result, overlay_img)
+            result = result.convert("RGB")
+        except Exception as e:
+            print(f"Failed to apply sticker overlay: {e}")
+
     strip_bytes = pil_to_bytes(result)
 
     # Generate GIF
