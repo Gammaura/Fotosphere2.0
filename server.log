@@ -121,3 +121,19 @@ WARNING:  StatReload detected changes in 'main.py'. Reloading...
 INFO:     Started server process [46734]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [46734]
+INFO:     Started server process [48413]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [48413]
+INFO:     Started server process [48501]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

@@ -62,6 +62,32 @@ def save_photo_history():
 
 load_history()
 
+def sync_from_supabase():
+    global PHOTO_HISTORY
+    try:
+        from db import supabase
+        res = supabase.table("sessions").select("*").eq("status", "completed").order("created_at", desc=True).limit(100).execute()
+        if res.data:
+            current_ids = {p["session_id"] for p in PHOTO_HISTORY}
+            new_entries = []
+            for item in res.data:
+                if item["id"] not in current_ids:
+                    new_entries.append({
+                        "session_id": item["id"],
+                        "strip_url": item.get("strip_url", ""),
+                        "frame": item.get("frame_id", "Unknown"),
+                        "filter": "Restored",
+                        "photos": 0,
+                        "created_at": item.get("created_at", datetime.utcnow().isoformat())
+                    })
+            if new_entries:
+                PHOTO_HISTORY = new_entries + PHOTO_HISTORY
+                save_photo_history()
+                return len(new_entries)
+    except Exception as e:
+        print(f"Sync error: {e}")
+    return 0
+
 VOUCHER_CODES = {}  # code -> {uses_left, created_at}
 
 # Load vouchers from file if exists
@@ -574,8 +600,10 @@ def admin_payments():
     return PAYMENT_HISTORY[-50:]
 
 @app.get("/api/admin/photos")
-def admin_photos():
-    return PHOTO_HISTORY[-50:]
+def admin_photos(sync: bool = False):
+    if sync:
+        sync_from_supabase()
+    return PHOTO_HISTORY[-100:]
 
 # ─── ADMIN: VOUCHERS ───
 @app.get("/api/admin/vouchers")
