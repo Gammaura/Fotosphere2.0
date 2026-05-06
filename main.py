@@ -66,7 +66,8 @@ def sync_from_supabase():
     global PHOTO_HISTORY
     try:
         from db import supabase
-        res = supabase.table("sessions").select("*").eq("status", "completed").order("created_at", desc=True).limit(100).execute()
+        # Ambil semua data yang punya strip_url (berarti sudah jadi fotonya)
+        res = supabase.table("sessions").select("*").not_.is_("strip_url", "null").order("created_at", desc=True).limit(100).execute()
         if res.data:
             current_ids = {p["session_id"] for p in PHOTO_HISTORY}
             new_entries = []
@@ -84,6 +85,9 @@ def sync_from_supabase():
                 PHOTO_HISTORY = new_entries + PHOTO_HISTORY
                 save_photo_history()
                 return len(new_entries)
+    except Exception as e:
+        print(f"Sync error: {e}")
+    return 0
     except Exception as e:
         print(f"Sync error: {e}")
     return 0
