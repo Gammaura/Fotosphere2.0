@@ -61,6 +61,24 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
     Returns list of dicts: [{"x": int, "y": int, "w": int, "h": int}, ...]
     sorted top-to-bottom, left-to-right.
     """
+    try:
+        import cv2
+        img_cv = cv2.imread(png_path, cv2.IMREAD_UNCHANGED)
+        if img_cv is not None and len(img_cv.shape) == 3 and img_cv.shape[2] == 4:
+            alpha = img_cv[:, :, 3]
+            _, mask = cv2.threshold(alpha, 10, 255, cv2.THRESH_BINARY_INV)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            slots = []
+            for cnt in contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                # Ignore tiny slivers or noise (minimum 300x300 for a valid photo slot)
+                if w >= 300 and h >= 300:
+                    slots.append({"x": int(x), "y": int(y), "w": int(w), "h": int(h)})
+            slots.sort(key=lambda s: (s["y"], s["x"]))
+            return slots
+    except Exception as e:
+        print(f"OpenCV slot detection failed, falling back to PIL BFS: {e}")
+
     img = Image.open(png_path).convert("RGBA")
     alpha = np.array(img)[:, :, 3]  # alpha channel
     
@@ -118,6 +136,39 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
     
     return slots
 
+def get_frame_slots(png_path: str) -> list:
+    import json as _json
+    json_path = os.path.splitext(png_path)[0] + ".json"
+    
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r') as jf:
+                data = _json.load(jf)
+                if "slots" in data and data["slots"]:
+                    return data["slots"]
+        except:
+            pass
+            
+    # Auto-detect if not in JSON or JSON is invalid
+    slots = detect_transparent_slots(png_path)
+    
+    if slots:
+        data = {}
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r') as jf:
+                    data = _json.load(jf)
+            except:
+                pass
+        data["slots"] = slots
+        try:
+            with open(json_path, 'w') as jf:
+                _json.dump(data, jf, indent=2)
+        except Exception as e:
+            print(f"Failed to save slots to {json_path}: {e}")
+            
+    return slots
+
 
 def composite_photos_on_frame(frame_path: str, photos: list, slots: list, 
                                 filter_name: str = "Natural") -> Image.Image:
@@ -127,6 +178,16 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
     """
     frame = Image.open(frame_path).convert("RGBA")
     fw, fh = frame.size
+    
+    # Memory Optimization: Limit internal resolution to max 1500px width
+    # This prevents OOM on massive 4K/8K frames while maintaining high quality
+    MAX_WIDTH = 1500
+    scale = 1.0
+    if fw > MAX_WIDTH:
+        scale = MAX_WIDTH / fw
+        fw = MAX_WIDTH
+        fh = int(frame.height * scale)
+        frame = frame.resize((fw, fh), Image.LANCZOS)
     
     # Create base canvas
     canvas = Image.new("RGBA", (fw, fh), (255, 255, 255, 255))
@@ -139,7 +200,11 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         photo = photos[i].convert("RGB")
         photo = apply_filter(photo, filter_name)
         
-        sx, sy, sw, sh = slot["x"], slot["y"], slot["w"], slot["h"]
+        # Scale slot coordinates based on frame resizing
+        sx = int(slot["x"] * scale)
+        sy = int(slot["y"] * scale)
+        sw = int(slot["w"] * scale)
+        sh = int(slot["h"] * scale)
         
         # Cover-crop: resize photo to fill slot while maintaining aspect ratio
         pw, ph = photo.size
@@ -183,19 +248,19 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
         
         try:
             name = base.replace("_", " ").title()
-            slots = []
             
-            # Check for JSON sidecar first
+            # get_frame_slots handles loading from JSON or auto-detecting and saving to JSON
+            slots = get_frame_slots(fpath)
+            
+            # Load display name if present in JSON
             if os.path.exists(json_path):
-                with open(json_path, 'r') as jf:
-                    jdata = _json.load(jf)
-                slots = jdata.get("slots", [])
-                if "display_name" in jdata:
-                    name = jdata["display_name"]
-            
-            # Auto-detect transparent slots if not defined in JSON
-            if not slots:
-                slots = detect_transparent_slots(fpath)
+                try:
+                    with open(json_path, 'r') as jf:
+                        jdata = _json.load(jf)
+                    if "display_name" in jdata:
+                        name = jdata["display_name"]
+                except:
+                    pass
             
             if not slots:
                 continue

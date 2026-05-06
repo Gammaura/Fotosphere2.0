@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Depends, status
-from fastapi.responses import JSONResponse, Response, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, Response, FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -18,7 +18,7 @@ from PIL import Image
 from payment import create_payment, check_payment_status, generate_order_id
 from db import create_session, update_session, upload_photo, upload_strip, upload_file
 from utils import (
-    FILTERS, scan_frames_dir, detect_transparent_slots,
+    FILTERS, scan_frames_dir, get_frame_slots,
     composite_photos_on_frame, pil_to_bytes, apply_filter
 )
 
@@ -79,9 +79,16 @@ def make_gif(photos: list, filter_name: str = "Natural") -> bytes:
         frames.append(img)
     if not frames:
         return b""
+    
+    # Boomerang effect: 0-1-2-3-2-1
+    if len(frames) > 2:
+        boomerang = frames + frames[-2:0:-1]
+    else:
+        boomerang = frames
+        
     buf = io.BytesIO()
-    frames[0].save(buf, format="GIF", save_all=True, append_images=frames[1:],
-                   duration=800, loop=0, optimize=True)
+    boomerang[0].save(buf, format="GIF", save_all=True, append_images=boomerang[1:],
+                   duration=400, loop=0, optimize=True)
     return buf.getvalue()
 
 # ─── MAIN ROUTES ──────────────────────────────────────────
@@ -231,7 +238,7 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
         raise HTTPException(status_code=404, detail="Frame not found")
 
     photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
-    slots = detect_transparent_slots(frame_path)
+    slots = get_frame_slots(frame_path)
     result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
 
     # Resize
@@ -261,7 +268,7 @@ async def api_finalize_strip(
         raise HTTPException(status_code=404, detail="Frame not found")
 
     photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
-    slots = detect_transparent_slots(frame_path)
+    slots = get_frame_slots(frame_path)
     result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
 
     if sticker_overlay:
@@ -327,6 +334,22 @@ async def api_finalize_strip(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/download-proxy")
+async def download_proxy(url: str, filename: str):
+    import requests
+    try:
+        r = requests.get(url, stream=True)
+        r.raise_for_status()
+        return StreamingResponse(
+            r.iter_content(chunk_size=1024*10),
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": r.headers.get("Content-Type", "application/octet-stream")
+            }
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Download failed: {str(e)}")
+
 @app.get("/download/{session_id}", response_class=HTMLResponse)
 def download_page(session_id: str):
     # Fetch session from DB to ensure it works even if server restarts
@@ -352,6 +375,9 @@ def download_page(session_id: str):
                     photos_count = p["photos"]
                     break
             photo_urls = [f"{base_path}/photo_{i}.png" for i in range(photos_count)]
+    
+    base = str(request.base_url)
+    def p(u, f): return f"{base}api/download-proxy?url={u}&filename={f}"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -360,35 +386,43 @@ def download_page(session_id: str):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Download Foto - Fotosphere</title>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
-            body {{ font-family: 'Plus Jakarta Sans', sans-serif; background: #f2f2f2; color: #1a1a1a; margin: 0; padding: 20px; text-align: center; }}
-            .container {{ max-width: 600px; margin: 0 auto; background: #fff; border-radius: 24px; padding: 30px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 4px solid #1a1a1a; }}
-            h1 {{ font-weight: 900; letter-spacing: 2px; margin-top: 0; }}
-            h2 {{ font-weight: 800; font-size: 1.2rem; margin-top: 30px; border-bottom: 2px dashed #ccc; padding-bottom: 10px; }}
-            img {{ max-width: 100%; border-radius: 12px; margin-bottom: 15px; border: 2px solid #eee; }}
-            .btn {{ display: block; background: #e91e63; color: #fff; padding: 15px 20px; border-radius: 50px; text-decoration: none; font-weight: 800; letter-spacing: 1px; margin-bottom: 20px; }}
-            .btn:active {{ transform: scale(0.97); }}
+            :root {{ --pink: #e91e63; --dark: #1a1a1a; --bg: #f8f9fa; }}
+            body {{ font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 20px; }}
+            .container {{ max-width: 500px; margin: 20px auto; background: #fff; border-radius: 32px; padding: 40px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }}
+            .logo {{ font-size: 1.5rem; font-weight: 800; letter-spacing: 4px; color: var(--dark); margin-bottom: 10px; }}
+            .sub {{ color: #666; font-size: 0.9rem; margin-bottom: 30px; }}
+            h2 {{ font-weight: 800; font-size: 1.1rem; margin-top: 40px; margin-bottom: 20px; color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 10px; }}
+            h2::before, h2::after {{ content: ''; flex: 1; height: 1px; background: #eee; }}
+            img {{ max-width: 100%; border-radius: 16px; margin-bottom: 20px; background: #fdfdfd; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }}
+            .btn {{ display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--dark); color: #fff; padding: 18px; border-radius: 20px; text-decoration: none; font-weight: 700; transition: 0.2s; margin-bottom: 15px; border: none; width: 100%; box-sizing: border-box; }}
+            .btn-pink {{ background: var(--pink); }}
+            .btn:active {{ transform: scale(0.96); opacity: 0.9; }}
             .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-            .grid .btn {{ padding: 10px; font-size: 0.9rem; }}
+            .live-badge {{ display: inline-block; background: #fff; border: 1px solid var(--pink); color: var(--pink); padding: 4px 10px; border-radius: 50px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; vertical-align: middle; }}
+            .footer {{ margin-top: 40px; font-size: 0.7rem; color: #999; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>FOTOSPHERE</h1>
-            <p>Terima kasih telah berfoto! Unduh semua file kamu di bawah ini.</p>
+            <div class="logo">FOTOSPHERE</div>
+            <div class="sub">Terima kasih telah berfoto! ✨</div>
             
-            <h2>📸 Hasil Strip</h2>
+            <h2>📸 HASIL STRIP</h2>
             <img src="{strip_url}" alt="Strip">
-            <a href="{strip_url}" class="btn" download="fotosphere_strip.png">Download Strip</a>
+            <a href="{p(strip_url, 'fotosphere_strip.png')}" class="btn btn-pink">UNDUH HASIL STRIP</a>
 
-            <h2>🎬 Animated GIF</h2>
-            <img src="{gif_url}" alt="GIF">
-            <a href="{gif_url}" class="btn" download="fotosphere_anim.gif">Download GIF</a>
+            <h2>✨ LIVE PHOTO <span class="live-badge">Bergerak</span></h2>
+            <img src="{gif_url}" alt="Live Photo">
+            <a href="{p(gif_url, 'fotosphere_live.gif')}" class="btn">UNDUH LIVE PHOTO</a>
 
-            <h2>🎞️ Foto Original</h2>
+            <h2>🎞️ FOTO ORIGINAL</h2>
             <div class="grid">
-                {"".join([f'<div><img src="{u}" alt="Photo {i+1}"><a href="{u}" class="btn" download="fotosphere_raw_{i+1}.png">Download Foto {i+1}</a></div>' for i, u in enumerate(photo_urls)])}
+                {"".join([f'<div><img src="{u}" alt="Photo {i+1}"><a href="{p(u, f"foto_{i+1}.png")}" class="btn" style="padding: 12px; font-size: 0.8rem;">FOTO {i+1}</a></div>' for i, u in enumerate(photo_urls)])}
             </div>
+            
+            <div class="footer">FOTOSPHERE © 2026 • self-photobox system</div>
         </div>
     </body>
     </html>
@@ -489,7 +523,7 @@ async def admin_upload_frame(
         with open(json_path, 'w') as jf:
             json.dump(sidecar, jf, indent=2)
 
-    slots = detect_transparent_slots(path)
+    slots = get_frame_slots(path)
     display = name.strip() if name else fname.replace('.png','').replace('_',' ').title()
     return {"success": True, "file": fname, "name": display, "slots_detected": len(slots)}
 
