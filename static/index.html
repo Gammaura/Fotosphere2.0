@@ -297,6 +297,22 @@
         <div id="loader-msg" class="loaderMsg">MEMPROSES...</div>
     </div>
 
+    <!-- Loader Overlay -->
+    <div id="overlay-loader" class="overlay" style="display:none">
+        <div class="loaderRing"></div>
+        <div class="loaderMsg">Mohon Tunggu...</div>
+    </div>
+
+    <!-- Global Modal Overlay -->
+    <div id="overlay-modal" class="overlay" style="display:none" onclick="hideModal()">
+        <div class="successCard" onclick="event.stopPropagation()">
+            <div id="modal-icon" class="successIcon">✨</div>
+            <div id="modal-title" class="successText">Notifikasi</div>
+            <div id="modal-sub" class="successSub">Keterangan pesan di sini.</div>
+            <button class="btn-dark-sm" style="margin-top:1.5rem;width:100%" onclick="hideModal()">OKE</button>
+        </div>
+    </div>
+
     <script src="app.js?v=2"></script>
 </body>
 </html>

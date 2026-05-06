@@ -2,6 +2,16 @@
    Fotosphere — App v8 — Real barcode scan, virtual keyboard,
    invoice overlay, empty frame dummies, retake per slot
    ═══════════════════════════════════════════════════════════ */
+function showModal(title, sub, icon = '✨') {
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-sub').innerText = sub;
+    document.getElementById('modal-icon').innerText = icon;
+    document.getElementById('overlay-modal').style.display = 'flex';
+}
+function hideModal() {
+    document.getElementById('overlay-modal').style.display = 'none';
+}
+
 const S = {
     sid: null, oid: null,
     frames: [], filters: [],
@@ -52,7 +62,7 @@ let _sT = null, _sL = 600;
 function startTimer() {
     _sL = 600; updTimers();
     if (_sT) clearInterval(_sT);
-    _sT = setInterval(() => { _sL--; updTimers(); if (_sL <= 0) { clearInterval(_sT); goHome(); alert('Sesi habis!'); } }, 1000);
+    _sT = setInterval(() => { _sL--; updTimers(); if (_sL <= 0) { clearInterval(_sT); goHome(); showModal('Sesi Habis', 'Mohon lakukan pembayaran kembali', '⏳'); } }, 1000);
 }
 function stopTimer() { if (_sT) { clearInterval(_sT); _sT = null; } }
 function updTimers() {
@@ -109,16 +119,7 @@ async function goScanTicket() {
                         }, () => { startTimer(); goToFrame(); });
                     } else {
                         _scanProcessing = false;
-                        // Brief visual feedback for invalid
-                        $('success-text').textContent = 'Ticket Tidak Valid';
-                        $('success-sub').textContent = 'Coba scan ulang';
-                        $('success-overlay').querySelector('.successIcon').textContent = '❌';
-                        $('invoice-box').style.display = 'none';
-                        $('success-overlay').style.display = 'flex';
-                        setTimeout(() => {
-                            $('success-overlay').style.display = 'none';
-                            $('success-overlay').querySelector('.successIcon').textContent = '✅';
-                        }, 1500);
+                        showModal('Ticket Tidak Valid', 'Coba scan ulang', '❌');
                     }
                 } catch (e) {
                     _scanProcessing = false;
@@ -169,7 +170,7 @@ async function goQRIS() {
                 }
             } catch (_) { }
         }, 3000);
-    } catch (e) { noloader(); alert('Gagal: ' + e.message); }
+    } catch (e) { noloader(); showModal('Gagal', e.message, '⚠️'); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -179,7 +180,7 @@ function goVoucher() { show('voucher'); $('voucher-input').value = ''; }
 
 async function claimVoucher() {
     const code = $('voucher-input').value.trim();
-    if (!code) return alert('Masukkan kode voucher');
+    if (!code) return showModal('Perhatian', 'Masukkan kode voucher', '💡');
     loader('MEMVERIFIKASI...');
     try {
         const r = await fetch('/api/voucher/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
@@ -192,9 +193,9 @@ async function claimVoucher() {
                 total: 'GRATIS (Voucher)'
             }, () => { startTimer(); goToFrame(); });
         } else {
-            alert('Gagal: ' + (d.error || 'Voucher tidak valid'));
+            showModal('Gagal', d.error || 'Voucher tidak valid', '❌');
         }
-    } catch (e) { noloader(); alert('Error: ' + e.message); }
+    } catch (e) { noloader(); showModal('Error', e.message, '⚠️'); }
 }
 
 // ═══════════════════════════════════════════════════════════
