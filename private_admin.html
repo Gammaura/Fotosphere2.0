@@ -259,7 +259,12 @@
                     <td>${p.filter}</td>
                     <td>${p.photos}</td>
                     <td style="font-size:.65rem">${p.created_at}</td>
-                    <td><a href="${p.strip_url}" target="_blank" class="btn btn-sm">Lihat</a></td>
+                    <td>
+                        <div style="display:flex;gap:5px">
+                            <a href="${p.strip_url}" target="_blank" class="btn btn-sm">Strip</a>
+                            <a href="/download/${p.session_id}" target="_blank" class="btn btn-sm btn-green">Barcode Link</a>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
