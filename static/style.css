@@ -138,8 +138,8 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .framePrev .frameImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none}
 .framePrev .slotWrap{position:absolute;overflow:visible;z-index:1}
 .framePrev .slotWrap img{width:100%;height:100%;object-fit:cover;border-radius:2px}
-.retakeBtn{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(233,30,99,.85);color:#fff;font-size:.45rem;font-weight:800;padding:2px 8px;border-radius:10px;z-index:3;cursor:pointer;border:none;white-space:nowrap;letter-spacing:.5px}
-.retakeBtn:hover{background:var(--pink)}
+.retakeBtn{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:var(--pink);color:#fff;font-size:.5rem;font-weight:900;padding:4px 12px;border-radius:50px;z-index:3;cursor:pointer;border:none;white-space:nowrap;letter-spacing:.5px;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:.2s}
+.retakeBtn:active{transform:translateX(-50%) scale(.9)}
 .slotActive{box-shadow:inset 0 0 0 2px var(--pink)}
 .slotNumber{font-size:.55rem;font-weight:900;color:#ccc}
 
@@ -207,5 +207,6 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .emjBtn:active{transform:scale(0.8)}
 .draggable-emoji{position:absolute;font-size:3rem;pointer-events:auto;cursor:grab;user-select:none;line-height:1;transform:translate(-50%, -50%)}
 .draggable-emoji:active{cursor:grabbing}
+.slotWrap img:hover { filter: brightness(0.8); transition: 0.2s; cursor: pointer; }
 .draggable-emoji .del-btn{position:absolute;top:-10px;right:-10px;background:rgba(0,0,0,0.6);color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;border:none}
 .draggable-emoji:hover .del-btn{opacity:1}

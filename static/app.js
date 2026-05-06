@@ -358,8 +358,8 @@ function updateShootPreview() {
 
         let content = '';
         if (S.photos[i]) {
-            content = `<img src="${URL.createObjectURL(S.photos[i])}">`;
-            content += `<button class="retakeBtn" onclick="retakeSlot(${i})">Retake</button>`;
+            content = `<img src="${URL.createObjectURL(S.photos[i])}" onclick="confirmRetake(${i})">`;
+            content += `<button class="retakeBtn" onclick="confirmRetake(${i})">Retake</button>`;
         } else if (isActive) {
             content = `<div style="width:100%;height:100%;background:rgba(233,30,99,.06);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--pink);font-size:.7rem">${i + 1}</span></div>`;
         } else {
@@ -376,6 +376,12 @@ function updateShootPreview() {
     $('shoot-status').textContent = filled >= S.max ? '✅ Semua foto selesai' : `📸 Foto ${S.slot + 1}/${S.max}`;
     $('btn-to-filter').style.display = filled >= S.max ? 'flex' : 'none';
     $('mb-retake').style.display = filled > 0 ? 'inline-block' : 'none';
+}
+
+function confirmRetake(i) {
+    if (confirm('Ulangi foto ini?')) {
+        retakeSlot(i);
+    }
 }
 
 function retakeSlot(i) {
