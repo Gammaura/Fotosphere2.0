@@ -117,3 +117,7 @@ Traceback (most recent call last):
     entry = {
             ^
 SyntaxError: '{' was never closed
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Started server process [46734]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

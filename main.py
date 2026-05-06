@@ -324,6 +324,11 @@ async def api_finalize_strip(
         entry = {
             "session_id": session_id,
             "strip_url": url,
+            "frame": frame_id,
+            "filter": filter_name,
+            "photos": len(data["photos"]),
+            "created_at": datetime.utcnow().isoformat()
+        }
         PHOTO_HISTORY.append(entry)
         save_photo_history()
 
