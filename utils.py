@@ -227,9 +227,9 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         
         # Cover-crop: resize photo to fill slot while maintaining aspect ratio
         pw, ph = photo.size
-        scale = max(sw / pw, sh / ph)
-        new_w = int(pw * scale)
-        new_h = int(ph * scale)
+        p_scale = max(sw / pw, sh / ph)
+        new_w = int(pw * p_scale)
+        new_h = int(ph * p_scale)
         photo = photo.resize((new_w, new_h), Image.LANCZOS)
         
         # Center crop
