@@ -39,6 +39,29 @@ os.makedirs("static/frames", exist_ok=True)
 SESSION_STORE = {}
 PAYMENT_HISTORY = []
 PHOTO_HISTORY = []
+
+PAYMENT_FILE = "static/payments.json"
+PHOTO_FILE = "static/photos.json"
+
+def load_history():
+    global PAYMENT_HISTORY, PHOTO_HISTORY
+    if os.path.exists(PAYMENT_FILE):
+        try:
+            with open(PAYMENT_FILE, 'r') as f: PAYMENT_HISTORY = json.load(f)
+        except: pass
+    if os.path.exists(PHOTO_FILE):
+        try:
+            with open(PHOTO_FILE, 'r') as f: PHOTO_HISTORY = json.load(f)
+        except: pass
+
+def save_payment_history():
+    with open(PAYMENT_FILE, 'w') as f: json.dump(PAYMENT_HISTORY, f, indent=2)
+
+def save_photo_history():
+    with open(PHOTO_FILE, 'w') as f: json.dump(PHOTO_HISTORY, f, indent=2)
+
+load_history()
+
 VOUCHER_CODES = {}  # code -> {uses_left, created_at}
 
 # Load vouchers from file if exists
@@ -112,6 +135,7 @@ def api_create_payment():
             "amount": 30000, "method": "QRIS",
             "status": "pending", "created_at": datetime.utcnow().isoformat()
         })
+        save_payment_history()
         return {
             "session_id": session_id,
             "order_id": order_id,
@@ -136,6 +160,7 @@ def api_payment_status(order_id: str):
             for p in PAYMENT_HISTORY:
                 if p["order_id"] == order_id:
                     p["status"] = "paid"
+            save_payment_history()
         return {"status": status, "session_id": session_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -184,6 +209,7 @@ async def api_claim_voucher(request: Request):
                     "amount": 0, "method": "Voucher",
                     "status": "paid", "created_at": datetime.utcnow().isoformat()
                 })
+                save_payment_history()
                 return {"valid": True, "session_id": session_id}
         return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
     except Exception as e:
@@ -295,7 +321,7 @@ async def api_finalize_strip(
             strip_url=url, status="completed",
             completed_at=datetime.utcnow().isoformat()
         )
-        PHOTO_HISTORY.append({
+        entry = {
             "session_id": session_id,
             "strip_url": url,
             "frame": frame_id,
