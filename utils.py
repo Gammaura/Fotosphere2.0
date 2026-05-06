@@ -75,7 +75,26 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
                 if w >= 300 and h >= 300:
                     slots.append({"x": int(x), "y": int(y), "w": int(w), "h": int(h)})
             slots.sort(key=lambda s: (s["y"], s["x"]))
-            return slots
+            
+            # Filter out nested/overlapping slots (e.g. shadow + main box)
+            # We keep the larger outer box
+            final_slots = []
+            # Sort by area descending to process larger boxes first
+            sorted_by_area = sorted(slots, key=lambda s: s['w'] * s['h'], reverse=True)
+            for s in sorted_by_area:
+                is_nested = False
+                for f in final_slots:
+                    # Check if s is substantially inside f
+                    if (s['x'] >= f['x'] - 20 and s['y'] >= f['y'] - 20 and 
+                        s['x'] + s['w'] <= f['x'] + f['w'] + 20 and 
+                        s['y'] + s['h'] <= f['y'] + f['h'] + 20):
+                        is_nested = True
+                        break
+                if not is_nested:
+                    final_slots.append(s)
+            
+            final_slots.sort(key=lambda s: (s["y"], s["x"]))
+            return final_slots
     except Exception as e:
         print(f"OpenCV slot detection failed, falling back to PIL BFS: {e}")
 
