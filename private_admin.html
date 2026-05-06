@@ -124,7 +124,12 @@
         <!-- PHOTOS -->
         <div id="panel-photos" class="panel">
             <div class="card">
-                <div class="card-title">Riwayat Foto <button class="btn btn-sm" onclick="loadPhotos()">🔄 Refresh</button></div>
+                <div class="card-title">Riwayat Foto 
+                    <div style="display:flex;gap:5px">
+                        <button class="btn btn-sm btn-green" onclick="loadPhotos(true)">☁️ Sync Supabase</button>
+                        <button class="btn btn-sm" onclick="loadPhotos()">🔄 Refresh</button>
+                    </div>
+                </div>
                 <table>
                     <thead><tr><th>Session</th><th>Frame</th><th>Filter</th><th>Foto</th><th>Waktu</th><th>Strip</th></tr></thead>
                     <tbody id="photo-list"></tbody>
@@ -247,8 +252,9 @@
         }
 
         // ═══ PHOTOS ═══
-        async function loadPhotos() {
-            const r = await fetch('/api/admin/photos');
+        async function loadPhotos(sync = false) {
+            if (sync) alert('Sedang menyinkronkan data dari Supabase... Mohon tunggu sebentar.');
+            const r = await fetch(`/api/admin/photos?sync=${sync}`);
             const photos = await r.json();
             const tb = document.getElementById('photo-list');
             if (!photos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Belum ada foto</td></tr>'; return; }
