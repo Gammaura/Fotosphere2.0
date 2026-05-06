@@ -351,7 +351,7 @@ async def download_proxy(url: str, filename: str):
         raise HTTPException(500, f"Download failed: {str(e)}")
 
 @app.get("/download/{session_id}", response_class=HTMLResponse)
-def download_page(session_id: str):
+def download_page(session_id: str, request: Request):
     # Fetch session from DB to ensure it works even if server restarts
     from db import get_session
     session_data = get_session(session_id)
