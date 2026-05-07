@@ -101,7 +101,7 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 
 /* ═══════════════ PREVIEW CARD ═══════════════ */
 .previewCard{width:100%;display:flex;flex-direction:column;background:var(--card);border:2.5px solid var(--dark);border-radius:var(--r);overflow:hidden;min-height:0}
-.prevBody{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;position:relative;min-height:0;overflow:hidden}
+.prevBody{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;position:relative;min-height:0;overflow:hidden;background:#f2f2f2}
 .prevBody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
 .prevPlaceholder{font-size:.8rem;color:#ccc;font-weight:600}
 .prevFoot{background:var(--dark);color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;font-size:.78rem;font-weight:700;flex-shrink:0}
