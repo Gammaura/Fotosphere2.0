@@ -386,15 +386,22 @@ async def api_finalize_strip(
         # Upload live photo clips (webm) to Supabase
         live_urls = []
         if live_clips:
+            print(f"[LIVE] Received {len(live_clips)} live clips for session {session_id}")
             for i, clip in enumerate(live_clips):
                 if clip and clip.filename:
                     try:
                         clip_bytes = await clip.read()
                         if len(clip_bytes) > 0:
-                            clip_url = upload_file(session_id, f"live_{i}.webm", clip_bytes, "video/webm")
+                            # Use original filename from frontend (e.g. live_0.webm, live_2.webm)
+                            # to preserve the correct slot index
+                            fname = clip.filename if clip.filename.startswith("live_") else f"live_{i}.webm"
+                            print(f"[LIVE] Uploading {fname} ({len(clip_bytes)} bytes)")
+                            clip_url = upload_file(session_id, fname, clip_bytes, "video/webm")
                             live_urls.append(clip_url)
+                        else:
+                            print(f"[LIVE] Clip {i} ({clip.filename}) is empty, skipping")
                     except Exception as e:
-                        print(f"Failed to upload live clip {i}: {e}")
+                        print(f"[LIVE] Failed to upload clip {i} ({clip.filename}): {e}")
 
         del SESSION_STORE[session_id]
 
