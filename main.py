@@ -523,8 +523,12 @@ def download_page(session_id: str, request: Request):
                         var frameImg=document.getElementById('live-frame-img');
                         var ready=Array.from(videos).filter(function(v){{return v.readyState>=2;}});
                         if(ready.length===0){{alert('Video belum dimuat.');btn.style.display='flex';loader.style.display='none';return;}}
-                        var cvs=document.createElement('canvas');cvs.width={fw};cvs.height={fh};
+                        var maxD=1080;
+                        var rw={fw}, rh={fh};
+                        if(rw>maxD || rh>maxD){{ var rat=Math.min(maxD/rw, maxD/rh); rw=Math.floor(rw*rat); rh=Math.floor(rh*rat); }}
+                        var cvs=document.createElement('canvas');cvs.width=rw;cvs.height=rh;
                         var ctx=cvs.getContext('2d');
+                        var scale_x = rw/{fw}, scale_y = rh/{fh};
                         await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
                         await new Promise(function(r){{setTimeout(r,200);}});
                         var stream=cvs.captureStream(30);
@@ -539,7 +543,7 @@ def download_page(session_id: str, request: Request):
                         function draw(){{
                             if(!recording)return;
                             ctx.fillStyle='#fff';ctx.fillRect(0,0,cvs.width,cvs.height);
-                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x,s.y,s.w,s.h);}}}});
+                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x*scale_x,s.y*scale_y,s.w*scale_x,s.h*scale_y);}}}});
                             if(frameImg.complete)ctx.drawImage(frameImg,0,0,cvs.width,cvs.height);
                             requestAnimationFrame(draw);
                         }}
