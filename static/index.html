@@ -1,283 +1,342 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fotosphere · Self Photo Studio</title>
     <link rel="icon" href="assets/icon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=9">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
+
 <body>
 
-    <!-- ═══════════════ HOME ═══════════════ -->
+    <!-- HOME -->
     <section id="screen-home" class="screen active">
         <div class="vCenter">
-            <a href="/admin" style="text-decoration:none"><img src="assets/icon.png" alt="Fotosphere" class="home-logo"></a>
+            <a href="/admin" style="text-decoration:none"><img src="assets/icon.png" alt="Fotosphere"
+                    class="home-logo"></a>
             <h1 class="home-brand">FOTOSPHERE</h1>
             <p class="home-sub">✦ Self Photo Studio ✦</p>
             <button class="btn-pink" onclick="goPaymentMethod()">TAP TO START</button>
             <p class="home-tag">Your Epic Shots are on the Way!</p>
             <div class="home-pm">
                 <p class="pm-lbl">METODE PEMBAYARAN</p>
-                <div class="pm-row">
-                    <img src="assets/gopay.png" alt="GoPay"><img src="assets/dana.png" alt="DANA">
-                    <img src="assets/ovo.png" alt="OVO"><img src="assets/shopeepay.png" alt="ShopeePay">
-                    <img src="assets/qris.png" alt="QRIS">
-                </div>
+                <div class="pm-row"><img src="assets/gopay.png" alt="GoPay"><img src="assets/dana.png" alt="DANA"><img
+                        src="assets/ovo.png" alt="OVO"><img src="assets/shopeepay.png" alt="ShopeePay"><img
+                        src="assets/bca.png" alt="BCA"><img src="assets/mandiri.png" alt="Mandiri"></div>
+                <div class="pm-row" style="margin-top:6px"><img src="assets/bri.png" alt="BRI"><img src="assets/bni.png"
+                        alt="BNI"><img src="assets/qris.png" alt="QRIS"></div>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════ PAYMENT METHOD (DARK) ═══════════════ -->
+    <!-- PAYMENT -->
     <section id="screen-paymethod" class="screen">
-        <div class="vCenter">
-            <button class="backBtn dark tl" onclick="goHome()"></button>
-            <div class="pgHeader">
-                <h2 class="pgTitle">PAYMENT</h2>
-                <p class="pgSub">Select the payment method you would like to use</p>
-            </div>
+        <div class="pageFrame">
+            <button class="backBtn" onclick="goHome()"></button>
+            <h2 class="pgTitle">PAYMENT</h2>
+            <p class="pgSub">Select the payment method you would like to use</p>
             <div class="pmCards">
                 <div class="pmCard" onclick="goScanTicket()">
-                    <div class="pmIcon"><img src="assets/scan_barcode.png" alt="Ticket"></div>
-                    <div class="pmLabel">Ticket</div>
+                    <div class="pmIconArea"><img src="assets/scan_barcode.png" alt="Ticket"></div>
+                    <div class="pmBlackBar">
+                        <div class="pmPill">Ticket</div>
+                    </div>
                 </div>
                 <div class="pmCard" onclick="goQRIS()">
-                    <div class="pmIcon"><img src="assets/scan_qris.png" alt="QRIS"></div>
-                    <div class="pmLabel">QRIS</div>
+                    <div class="pmIconArea"><img src="assets/scan_qris.png" alt="QRIS"></div>
+                    <div class="pmBlackBar">
+                        <div class="pmPill">QRIS</div>
+                    </div>
                 </div>
                 <div class="pmCard" onclick="goVoucher()">
-                    <div class="pmIcon"><img src="assets/voucher.png" alt="Voucher"></div>
-                    <div class="pmLabel">Voucher</div>
+                    <div class="pmIconArea"><img src="assets/voucher.png" alt="Voucher"></div>
+                    <div class="pmBlackBar">
+                        <div class="pmPill">Voucher</div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════ SCAN TICKET ═══════════════ -->
+    <!-- SCAN TICKET -->
     <section id="screen-ticket" class="screen">
-        <div class="vCenter">
-            <button class="backBtn dark tl" onclick="stopTicketScan();goPaymentMethod()"></button>
-            <div class="pgHeader">
-                <h2 class="pgTitle">SCAN TICKET</h2>
-            </div>
+        <div class="pageFrame">
+            <button class="backBtn" onclick="stopTicketScan();goPaymentMethod()"></button>
+            <h2 class="pgTitle">SCAN TICKET</h2>
             <div class="scanBox">
-                <div class="scanCorners"><span class="sc tl"></span><span class="sc tr"></span><span class="sc bl"></span><span class="sc br"></span></div>
+                <div class="scanCorners"><span class="sc tl"></span><span class="sc tr"></span><span
+                        class="sc bl"></span><span class="sc br"></span></div>
                 <div id="ticket-reader"></div>
             </div>
-            <p class="pgDesc">Arahkan tiket anda ke kamera dan tahan selama<br>beberapa detik hingga berhasil dipindai</p>
+            <p class="pgDesc">Arahkan tiket anda ke kamera dan tahan selama<br>beberapa detik hingga berhasil dipindai
+            </p>
         </div>
     </section>
 
-    <!-- ═══════════════ QRIS ═══════════════ -->
+    <!-- QRIS -->
     <section id="screen-qris" class="screen">
-        <div class="vCenter">
-            <button class="backBtn dark tl" onclick="goPaymentMethod()"></button>
-            <div class="pgHeader">
-                <h2 class="pgTitle">PEMBAYARAN QRIS</h2>
-            </div>
+        <div class="pageFrame">
+            <button class="backBtn" onclick="goPaymentMethod()"></button>
+            <h2 class="pgTitle">PEMBAYARAN QRIS</h2>
             <div class="qrBox" id="qr-box"><span class="qrPh">Memuat...</span></div>
-            <p class="qrPrice">IDR 30.000</p>
+            <p class="qrPrice">Rp. 30.000</p>
             <p class="pgDesc">Scan barcode untuk melalukan pembayaran</p>
         </div>
     </section>
 
-    <!-- ═══════════════ VOUCHER ═══════════════ -->
+    <!-- VOUCHER -->
     <section id="screen-voucher" class="screen">
-        <div class="vCenter">
-            <button class="backBtn dark tl" onclick="goPaymentMethod()"></button>
-            <div class="pgHeader">
-                <h2 class="pgTitle">TUKAR VOUCHER</h2>
-            </div>
+        <div class="pageFrame">
+            <button class="backBtn" onclick="goPaymentMethod()"></button>
+            <h2 class="pgTitle">TUKAR VOUCHER</h2>
             <div class="vcCard">
                 <p class="vcLabel">Masukkan kode Voucher</p>
                 <input type="text" id="voucher-input" class="vcInput" autocomplete="off" readonly>
-                <button class="btn-dark" onclick="claimVoucher()">Klaim Voucher</button>
+                <button class="btn-accent" onclick="claimVoucher()">Klaim Voucher</button>
             </div>
-            <!-- Virtual Keyboard -->
-            <div class="vkb" id="virtual-keyboard">
-                <div class="vkb-row">
-                    <button class="vkb-key vkb-num" onclick="vkType('1')">1</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('2')">2</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('3')">3</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('4')">4</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('5')">5</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('6')">6</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('7')">7</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('8')">8</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('9')">9</button>
-                    <button class="vkb-key vkb-num" onclick="vkType('0')">0</button>
-                </div>
-                <div class="vkb-row">
-                    <button class="vkb-key" onclick="vkType('Q')">Q</button>
-                    <button class="vkb-key" onclick="vkType('W')">W</button>
-                    <button class="vkb-key" onclick="vkType('E')">E</button>
-                    <button class="vkb-key" onclick="vkType('R')">R</button>
-                    <button class="vkb-key" onclick="vkType('T')">T</button>
-                    <button class="vkb-key" onclick="vkType('Y')">Y</button>
-                    <button class="vkb-key" onclick="vkType('U')">U</button>
-                    <button class="vkb-key" onclick="vkType('I')">I</button>
-                    <button class="vkb-key" onclick="vkType('O')">O</button>
-                    <button class="vkb-key" onclick="vkType('P')">P</button>
-                </div>
-                <div class="vkb-row">
-                    <button class="vkb-key" onclick="vkType('A')">A</button>
-                    <button class="vkb-key" onclick="vkType('S')">S</button>
-                    <button class="vkb-key" onclick="vkType('D')">D</button>
-                    <button class="vkb-key" onclick="vkType('F')">F</button>
-                    <button class="vkb-key" onclick="vkType('G')">G</button>
-                    <button class="vkb-key" onclick="vkType('H')">H</button>
-                    <button class="vkb-key" onclick="vkType('J')">J</button>
-                    <button class="vkb-key" onclick="vkType('K')">K</button>
-                    <button class="vkb-key" onclick="vkType('L')">L</button>
-                </div>
-                <div class="vkb-row">
-                    <button class="vkb-key" onclick="vkType('Z')">Z</button>
-                    <button class="vkb-key" onclick="vkType('X')">X</button>
-                    <button class="vkb-key" onclick="vkType('C')">C</button>
-                    <button class="vkb-key" onclick="vkType('V')">V</button>
-                    <button class="vkb-key" onclick="vkType('B')">B</button>
-                    <button class="vkb-key" onclick="vkType('N')">N</button>
-                    <button class="vkb-key" onclick="vkType('M')">M</button>
-                    <button class="vkb-key vkb-del" onclick="vkDel()">⌫</button>
-                </div>
+            <div class="vkb">
+                <div class="vkb-row"><button class="vkb-key" onclick="vkType('1')">1</button><button class="vkb-key"
+                        onclick="vkType('2')">2</button><button class="vkb-key" onclick="vkType('3')">3</button><button
+                        class="vkb-key" onclick="vkType('4')">4</button><button class="vkb-key"
+                        onclick="vkType('5')">5</button><button class="vkb-key" onclick="vkType('6')">6</button><button
+                        class="vkb-key" onclick="vkType('7')">7</button><button class="vkb-key"
+                        onclick="vkType('8')">8</button><button class="vkb-key" onclick="vkType('9')">9</button><button
+                        class="vkb-key" onclick="vkType('0')">0</button></div>
+                <div class="vkb-row"><button class="vkb-key" onclick="vkType('Q')">Q</button><button class="vkb-key"
+                        onclick="vkType('W')">W</button><button class="vkb-key" onclick="vkType('E')">E</button><button
+                        class="vkb-key" onclick="vkType('R')">R</button><button class="vkb-key"
+                        onclick="vkType('T')">T</button><button class="vkb-key" onclick="vkType('Y')">Y</button><button
+                        class="vkb-key" onclick="vkType('U')">U</button><button class="vkb-key"
+                        onclick="vkType('I')">I</button><button class="vkb-key" onclick="vkType('O')">O</button><button
+                        class="vkb-key" onclick="vkType('P')">P</button></div>
+                <div class="vkb-row"><button class="vkb-key" onclick="vkType('A')">A</button><button class="vkb-key"
+                        onclick="vkType('S')">S</button><button class="vkb-key" onclick="vkType('D')">D</button><button
+                        class="vkb-key" onclick="vkType('F')">F</button><button class="vkb-key"
+                        onclick="vkType('G')">G</button><button class="vkb-key" onclick="vkType('H')">H</button><button
+                        class="vkb-key" onclick="vkType('J')">J</button><button class="vkb-key"
+                        onclick="vkType('K')">K</button><button class="vkb-key" onclick="vkType('L')">L</button></div>
+                <div class="vkb-row"><button class="vkb-key" onclick="vkType('Z')">Z</button><button class="vkb-key"
+                        onclick="vkType('X')">X</button><button class="vkb-key" onclick="vkType('C')">C</button><button
+                        class="vkb-key" onclick="vkType('V')">V</button><button class="vkb-key"
+                        onclick="vkType('B')">B</button><button class="vkb-key" onclick="vkType('N')">N</button><button
+                        class="vkb-key" onclick="vkType('M')">M</button><button class="vkb-key vkb-del"
+                        onclick="vkDel()">⌫</button></div>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════ FRAME SELECT (NO BACK BUTTON) ═══════════════ -->
+    <!-- FRAME SELECT -->
     <section id="screen-frame" class="screen">
-        <div class="splitPage">
-            <div class="timerPill tr" id="frame-timer">10:00</div>
-            <!-- LEFT: frame grid -->
-            <div class="splitLeft">
-                <div class="borderedCard">
-                    <div class="cardHead">Pilih Frame</div>
-                    <div class="frameGrid" id="frame-grid"></div>
-                </div>
-            </div>
-            <!-- RIGHT: preview card -->
-            <div class="splitRight">
-                <div class="previewCard" id="frame-preview-card">
-                    <div class="prevBody" id="frame-prev-body">
-                        <p class="prevPlaceholder">Pilih frame di sebelah kiri</p>
-                    </div>
-                    <div class="prevFoot">
-                        <span id="frame-name-label">-</span>
-                        <button class="arrowBtn" id="btn-go-shoot" onclick="goToShoot()" style="display:none">Mulai Foto <span class="arrowCircle">›</span></button>
+        <div class="splitWrap">
+            <div class="timerPill" id="frame-timer">04.59</div>
+            <div class="splitInner">
+                <div class="splitL">
+                    <div class="bCard">
+                        <div class="bCardHead" id="frame-card-head">ADD FRAME</div>
+                        <div class="bCardBody" id="frame-body"></div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ═══════════════ SHOOT ═══════════════ -->
-    <section id="screen-shoot" class="screen">
-        <div class="splitPage shootPage">
-            <button class="backBtn dark tl" onclick="backToFrame()"></button>
-            <div class="timerPill tr" id="shoot-timer">10:00</div>
-            <!-- LEFT: camera + buttons underneath -->
-            <div class="splitLeft camCol">
-                <div class="camCard">
-                    <video id="cam-vid" autoplay playsinline muted></video>
-                    <!-- Crop guide overlay -->
-                    <div class="cropGuide" id="crop-guide">
-                        <div class="cropBar cropTop" id="crop-top"></div>
-                        <div class="cropBar cropBot" id="crop-bot"></div>
-                        <div class="cropBar cropLeft" id="crop-left"></div>
-                        <div class="cropBar cropRight" id="crop-right"></div>
-                        <div class="cropCenter" id="crop-center"></div>
-                    </div>
-                    <div class="camCD" id="cam-cd" style="display:none"><span id="cam-cd-n">5</span></div>
-                    <div class="camFlash" id="cam-flash"></div>
-                    <!-- TAP TO START overlay -->
-                    <div class="camTap" id="cam-tap" onclick="tapToShoot()">
-                        <div class="camTapInner">
-                            <span class="camTapIcon">📸</span>
-                            <span class="camTapText">TAP TO START</span>
-                            <span class="camTapSub" id="cam-tap-sub">Foto 1/3</span>
+                <div class="splitR">
+                    <div class="phone">
+                        <div class="phoneScr" id="frame-prev-body">
+                            <p class="prevPh">Pilih frame di sebelah kiri</p>
+                        </div>
+                        <div class="phoneFoot">
+                            <div class="fInfoCol">
+                                <span class="fInfoTitle" id="frame-name-label">-</span>
+                                <span class="fInfoSub" id="frame-photo-count">-</span>
+                            </div>
+                            <button class="nextBtn" id="btn-go-shoot" onclick="goToShoot()" style="display:none">Next
+                                <span class="arrowCircle">›</span></button>
                         </div>
                     </div>
                 </div>
-                <div class="camBtns">
-                    <button class="btn-dark-sm" id="mb-mirror" onclick="setMirror(true)">Mirror</button>
-                    <button class="btn-dark-sm act" id="mb-normal" onclick="setMirror(false)">Normal</button>
-                    <button class="btn-dark-sm" id="mb-retake" onclick="retakeLast()" style="background:var(--pink);border-color:var(--pink);display:none">Retake</button>
-                </div>
             </div>
-            <!-- RIGHT: frame preview with photos -->
-            <div class="splitRight">
-                <div class="previewCard">
-                    <div class="prevBody" id="shoot-prev-body"></div>
-                    <div class="prevFoot">
-                        <span id="shoot-status">📸 Foto 1/3</span>
-                        <button class="arrowBtn" id="btn-to-filter" onclick="goToFilter()" style="display:none">Pilih Filter <span class="arrowCircle">›</span></button>
+        </div>
+    </section>
+
+    <!-- SHOOT -->
+    <section id="screen-shoot" class="screen">
+        <div class="splitWrap">
+            <button class="backBtn" onclick="backToFrame()"></button>
+            <div class="timerPill" id="shoot-timer">04.59</div>
+            <div class="splitInner">
+                <div class="splitL camCol">
+                    <div class="camCard">
+                        <video id="cam-vid" autoplay playsinline muted></video>
+                        <div class="cropGuide">
+                            <div class="cropBar cropTop" id="crop-top"></div>
+                            <div class="cropBar cropBot" id="crop-bot"></div>
+                            <div class="cropBar cropLeft" id="crop-left"></div>
+                            <div class="cropBar cropRight" id="crop-right"></div>
+                            <div class="cropCenter" id="crop-center"></div>
+                        </div>
+                        <div class="camCD" id="cam-cd" style="display:none"><span id="cam-cd-n">3</span></div>
+                        <div class="camFlash" id="cam-flash"></div>
+                        <div class="camTap" id="cam-tap" onclick="tapToShoot()">
+                            <div class="camTapInner"><span class="camTapIcon">📸</span><span class="camTapText">TAP TO
+                                    START</span><span class="camTapSub" id="cam-tap-sub">Foto 1/3</span></div>
+                        </div>
+                    </div>
+                    <div class="camCtrls">
+                        <div class="cg"><span class="cgL">Set Timer</span><div class="cgBtns"><button class="cgB on" id="timer-3"
+                                onclick="setTimer(3)">3s</button><button class="cgB" id="timer-5"
+                                onclick="setTimer(5)">5s</button><button class="cgB" id="timer-7"
+                                onclick="setTimer(7)">7s</button></div></div>
+                        <div class="cg"><span class="cgL">Camera Mode</span><div class="cgBtns"><button class="cgB on" id="mb-normal"
+                                onclick="setMirror(false)">Normal</button><button class="cgB" id="mb-mirror"
+                                onclick="setMirror(true)">Mirror</button></div></div>
+                        <div class="cg"><span class="cgL">Live Photo</span><div class="cgBtns"><button class="cgB on" id="lp-on"
+                                onclick="setLivePhoto(true)">On</button><button class="cgB" id="lp-off"
+                                onclick="setLivePhoto(false)">Off</button></div></div>
+                    </div>
+                </div>
+                <div class="splitR">
+                    <div class="phone">
+                        <div class="phoneScr" id="shoot-prev-body"></div>
+                        <div class="phoneFoot">
+                            <div class="fInfoCol">
+                                <span class="fInfoTitle" id="shoot-frame-name">-</span>
+                                <span class="fInfoSub" id="shoot-photo-total">-</span>
+                            </div>
+                            <div class="fInfoCol highlight">
+                                <span class="fInfoTitle" id="shoot-progress">-</span>
+                                <span class="fInfoSub">Completed</span>
+                            </div>
+                            <button class="nextBtn" id="btn-to-emoji" onclick="goToEmoji()" style="display:none">Next
+                                <span class="arrowCircle">›</span></button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <canvas id="cam-cvs" style="display:none"></canvas>
     </section>
 
-    <!-- ═══════════════ FILTER ═══════════════ -->
+    <!-- EMOJI -->
+    <section id="screen-emoji" class="screen">
+        <div class="splitWrap">
+            <button class="backBtn" onclick="show('shoot')"></button>
+            <div class="timerPill" id="emoji-timer">04.59</div>
+            <div class="splitInner">
+                <div class="splitL">
+                    <div class="bCard">
+                        <div class="bCardHead">ADD EMOJI</div>
+                        <div class="bCardBody">
+                            <div class="emojiGrid" id="emoji-grid2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="splitR">
+                    <div class="phone">
+                        <div class="phoneScr" id="emoji-prev-body">
+                            <img id="emoji-prev-img" src="" alt="">
+                            <div id="emoji-overlay"
+                                style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+                        </div>
+                        <div class="phoneFoot">
+                            <div class="fInfoCol">
+                                <span class="fInfoTitle" id="emoji-frame-name">-</span>
+                                <span class="fInfoSub" id="emoji-photo-total">-</span>
+                            </div>
+                            <div class="fInfoCol highlight">
+                                <span class="fInfoTitle" id="emoji-status">Original</span>
+                                <span class="fInfoSub">Emoji</span>
+                            </div>
+                            <button class="nextBtn" onclick="goToFilter()">Next <span
+                                    class="arrowCircle">›</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FILTER -->
     <section id="screen-filter" class="screen">
-        <div class="splitPage">
-            <button class="backBtn dark tl" onclick="show('shoot')"></button>
-            <div class="timerPill tr" id="filter-timer">10:00</div>
-            <!-- LEFT: filter grid with preview thumbnails -->
-            <div class="splitLeft">
-                <div class="borderedCard">
-                    <div class="cardHead">Pilih Filter</div>
-                    <div class="filterGrid" id="filter-grid"></div>
-                </div>
-            </div>
-            <!-- RIGHT: full preview -->
-            <div class="splitRight">
-                <div class="previewCard">
-                    <div class="prevBody" id="filter-prev-body">
-                        <img id="prev-img" src="" alt="">
-                        <div id="prev-spin" class="spin" style="display:none"></div>
-                        <!-- Emoji Overlay -->
-                        <div id="emoji-overlay" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
-                    </div>
-                    <div class="prevFoot">
-                        <button class="btn-dark-sm" onclick="toggleEmojiDrawer()" style="padding: 6px 14px; font-size: 0.7rem; margin-right: 8px;">✨ Stickers</button>
-                        <span id="filter-frame-name" style="flex:1; text-align:center;">Frame</span>
-                        <button class="arrowBtn" onclick="finalizeStrip()">Cetak Sekarang <span class="arrowCircle">›</span></button>
+        <div class="splitWrap">
+            <button class="backBtn" onclick="show('emoji')"></button>
+            <div class="timerPill" id="filter-timer">04.59</div>
+            <div class="splitInner">
+                <div class="splitL">
+                    <div class="bCard">
+                        <div class="bCardHead">ADD FILTER</div>
+                        <div class="bCardBody">
+                            <div class="filterGrid" id="filter-grid"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Emoji Drawer -->
-        <div id="emoji-drawer" class="emojiDrawer">
-            <div class="emojiDrawerHead">
-                <span>Pilih Stiker Lucu</span>
-                <button onclick="toggleEmojiDrawer()" style="background:none; border:none; color:#fff; font-weight:bold; font-size:1.2rem; cursor:pointer;">×</button>
-            </div>
-            <div class="emojiGrid" id="emoji-grid">
-                <!-- Emojis populated via JS -->
+                <div class="splitR">
+                    <div class="phone">
+                        <div class="phoneScr" id="filter-prev-body">
+                            <img id="prev-img" src="" alt="">
+                            <div id="filter-emoji-overlay"
+                                style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+                            <div id="prev-spin" class="spin" style="display:none"></div>
+                        </div>
+                        <div class="phoneFoot">
+                            <div class="fInfoCol">
+                                <span class="fInfoTitle" id="filter-frame-name">-</span>
+                                <span class="fInfoSub" id="filter-photo-total">-</span>
+                            </div>
+                            <div class="fInfoCol highlight">
+                                <span class="fInfoTitle" id="filter-status">Natural</span>
+                                <span class="fInfoSub">Filter</span>
+                            </div>
+                            <button class="nextBtn" onclick="finalizeStrip()">Cetak <span
+                                    class="arrowCircle">›</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════ DONE ═══════════════ -->
+    <!-- DONE -->
     <section id="screen-done" class="screen">
-        <div class="vCenter">
-            <div class="doneCard">
-                <div class="doneStrip"><img id="done-img" src="" alt="Strip"></div>
-                <div class="doneActions">
-                    <h2 class="doneTitle">STRIP SIAP! 🎉</h2>
-                    <p class="doneSub">Scan QR untuk download foto asli & GIF</p>
-                    <div class="doneQR" id="done-qr"></div>
-                    <button class="btn-outline w100" onclick="goHome()" style="margin-top:1rem">🏠 Sesi Baru</button>
+        <div class="splitWrap">
+            <div class="doneSplit">
+                <div class="doneL">
+                    <div class="donePhone">
+                        <div class="donePhScr"></div>
+                        <div class="donePhChin"></div>
+                    </div>
+                    <div class="dtRow">
+                        <button class="dtBtn on" id="dt-photo" onclick="doneToggle('photo')">Photo</button>
+                        <button class="dtBtn" id="dt-live" onclick="doneToggle('live')">Live</button>
+                        <button class="dtBtn" id="dt-gif" onclick="doneToggle('gif')">GIF</button>
+                    </div>
+                </div>
+                <div class="doneRWrap">
+                    <div class="doneR">
+                        <h2 class="doneTitle">PHOTO DIGITAL</h2>
+                        <div class="doneQR" id="done-qr"></div>
+                        <p class="doneSub">Scan QR untuk download hasil fotomu</p>
+                        <div class="doneSocial">
+                            <div class="doneSocItem">
+                                <img src="assets/ig.png" alt="IG" class="socIcon" onerror="this.outerHTML='<div class=sIcon>📷</div>'">
+                                <div><strong>Follow on Instagram</strong><br>@fotosphere.id</div>
+                            </div>
+                            <div class="doneSocItem">
+                                <img src="assets/tiktok.png" alt="TT" class="socIcon" onerror="this.outerHTML='<div class=sIcon>🎵</div>'">
+                                <div><strong>Follow on TikTok</strong><br>@fotosphere.id</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="doneBot">
+                        <div class="doneHash">#Fotosphere #Photobooth</div>
+                        <button class="btn-end" onclick="goHome()">END SESSION</button>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ═══════════════ SUCCESS OVERLAY ═══════════════ -->
+    <!-- OVERLAYS -->
     <div id="success-overlay" class="overlay" style="display:none">
         <div class="successCard">
             <div class="successIcon">✅</div>
@@ -285,34 +344,27 @@
             <p class="successSub" id="success-sub">Terima Kasih</p>
             <div class="invoiceBox" id="invoice-box" style="display:none">
                 <div class="invoiceLine"><span>Metode</span><span id="inv-method">-</span></div>
-                <div class="invoiceLine"><span>Order ID</span><span id="inv-order" style="font-size:.6rem">-</span></div>
+                <div class="invoiceLine"><span>Order ID</span><span id="inv-order" style="font-size:.55rem">-</span>
+                </div>
                 <div class="invoiceLine"><span>Total</span><span id="inv-total">-</span></div>
             </div>
         </div>
     </div>
-
-    <!-- ═══════════════ LOADER ═══════════════ -->
     <div id="loader" class="overlay" style="display:none">
         <div class="loaderRing"></div>
         <div id="loader-msg" class="loaderMsg">MEMPROSES...</div>
     </div>
-
-    <!-- Loader Overlay -->
-    <div id="overlay-loader" class="overlay" style="display:none">
-        <div class="loaderRing"></div>
-        <div class="loaderMsg">Mohon Tunggu...</div>
-    </div>
-
-    <!-- Global Modal Overlay -->
     <div id="overlay-modal" class="overlay" style="display:none" onclick="hideModal()">
         <div class="successCard" onclick="event.stopPropagation()">
             <div id="modal-icon" class="successIcon">✨</div>
             <div id="modal-title" class="successText">Notifikasi</div>
-            <div id="modal-sub" class="successSub">Keterangan pesan di sini.</div>
-            <button class="btn-dark-sm" style="margin-top:1.5rem;width:100%" onclick="hideModal()">OKE</button>
+            <div id="modal-sub" class="successSub">Info</div>
+            <button class="btn-accent" style="margin-top:1.2rem;width:100%" onclick="hideModal()">OKE</button>
         </div>
     </div>
 
-    <script src="app.js?v=2"></script>
+    <canvas id="cam-cvs" style="display:none"></canvas>
+    <script src="app.js?v=9"></script>
 </body>
+
 </html>

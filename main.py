@@ -16,7 +16,22 @@ from datetime import datetime
 from PIL import Image
 
 from payment import create_payment, check_payment_status, generate_order_id
-from db import create_session, update_session, upload_photo, upload_strip, upload_file
+from db import (
+    create_session, update_session, upload_photo, upload_strip, upload_file,
+    get_session, get_all_sessions,
+    # Frames
+    db_upsert_frame, db_delete_frame, storage_upload_frame,
+    sync_frames_to_local, upload_local_frames_to_supabase,
+    # Vouchers
+    db_upsert_voucher, db_update_voucher_uses, db_delete_voucher,
+    sync_vouchers_from_db, upload_local_vouchers_to_supabase,
+    # Tickets
+    db_upsert_ticket, db_update_ticket_uses, db_delete_ticket,
+    sync_tickets_from_db, upload_local_tickets_to_supabase,
+    # Payments & Photos
+    db_insert_payment, db_update_payment_status, db_get_all_payments,
+    db_get_photo_history,
+)
 from utils import (
     FILTERS, scan_frames_dir, get_frame_slots,
     composite_photos_on_frame, pil_to_bytes, apply_filter
@@ -35,75 +50,90 @@ os.makedirs("static", exist_ok=True)
 os.makedirs("static/assets", exist_ok=True)
 os.makedirs("static/frames", exist_ok=True)
 
-# In-memory stores
-SESSION_STORE = {}
-PAYMENT_HISTORY = []
-PHOTO_HISTORY = []
+# In-memory stores (ephemeral — session photos only)
+SESSION_STORE = {} # session_id -> {"photos": [], "timestamp": datetime, ...}
 
-PAYMENT_FILE = "static/payments.json"
-PHOTO_FILE = "static/photos.json"
+# Vouchers & Tickets — loaded from Supabase on startup
+VOUCHER_CODES = {}  # code -> {uses_left, created_at, custom_frame}
+TICKET_CODES = {}   # code -> {uses_left, created_at, custom_frame}
 
-def load_history():
-    global PAYMENT_HISTORY, PHOTO_HISTORY
-    if os.path.exists(PAYMENT_FILE):
+import threading
+import time
+
+def cleanup_sessions_task():
+    """Periodically clear old sessions from memory."""
+    global SESSION_STORE
+    while True:
         try:
-            with open(PAYMENT_FILE, 'r') as f: PAYMENT_HISTORY = json.load(f)
-        except: pass
-    if os.path.exists(PHOTO_FILE):
-        try:
-            with open(PHOTO_FILE, 'r') as f: PHOTO_HISTORY = json.load(f)
-        except: pass
+            now = datetime.utcnow()
+            to_delete = []
+            for sid, data in SESSION_STORE.items():
+                created_at = data.get("created_at", now)
+                if (now - created_at).total_seconds() > 1200:
+                    to_delete.append(sid)
+            for sid in to_delete:
+                print(f"Cleaning up stale session: {sid}")
+                del SESSION_STORE[sid]
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        time.sleep(600)
 
-def save_payment_history():
-    with open(PAYMENT_FILE, 'w') as f: json.dump(PAYMENT_HISTORY, f, indent=2)
+threading.Thread(target=cleanup_sessions_task, daemon=True).start()
 
-def save_photo_history():
-    with open(PHOTO_FILE, 'w') as f: json.dump(PHOTO_HISTORY, f, indent=2)
+# ── Startup: Sync everything from Supabase ──
+def startup_sync():
+    global VOUCHER_CODES, TICKET_CODES
+    print("═══ Syncing data from Supabase ═══")
 
-load_history()
-
-def sync_from_supabase():
-    global PHOTO_HISTORY
+    # 1. Frames: upload any local-only frames to Supabase, then download missing ones
     try:
-        from db import supabase
-        # Ambil semua data yang punya strip_url (berarti sudah jadi fotonya)
-        res = supabase.table("sessions").select("*").not_.is_("strip_url", "null").order("created_at", desc=True).limit(100).execute()
-        if res.data:
-            current_ids = {p["session_id"] for p in PHOTO_HISTORY}
-            new_entries = []
-            for item in res.data:
-                if item["id"] not in current_ids:
-                    new_entries.append({
-                        "session_id": item["id"],
-                        "strip_url": item.get("strip_url", ""),
-                        "frame": item.get("frame_id", "Unknown"),
-                        "filter": "Restored",
-                        "photos": 0,
-                        "created_at": item.get("created_at", datetime.utcnow().isoformat())
-                    })
-            if new_entries:
-                PHOTO_HISTORY = new_entries + PHOTO_HISTORY
-                save_photo_history()
-                return len(new_entries)
+        upload_local_frames_to_supabase()
+        sync_frames_to_local()
     except Exception as e:
-        print(f"Sync error: {e}")
-    return 0
+        print(f"Frame sync warning: {e}")
 
-VOUCHER_CODES = {}  # code -> {uses_left, created_at}
+    # 2. Vouchers: migrate local JSON if exists, then load from DB
+    local_voucher_file = "static/vouchers.json"
+    if os.path.exists(local_voucher_file):
+        try:
+            with open(local_voucher_file, 'r') as f:
+                local_vouchers = json.load(f)
+            if local_vouchers:
+                upload_local_vouchers_to_supabase(local_vouchers)
+                # Rename file so we don't re-migrate
+                os.rename(local_voucher_file, local_voucher_file + ".migrated")
+                print(f"Migrated {len(local_vouchers)} vouchers from local JSON")
+        except Exception as e:
+            print(f"Voucher migration warning: {e}")
 
-# Load vouchers from file if exists
-VOUCHER_FILE = "static/vouchers.json"
-TICKET_FILE = "static/tickets.json"
-def load_vouchers():
-    global VOUCHER_CODES
-    if os.path.exists(VOUCHER_FILE):
-        with open(VOUCHER_FILE, 'r') as f:
-            VOUCHER_CODES = json.load(f)
-def save_vouchers():
-    os.makedirs(os.path.dirname(VOUCHER_FILE), exist_ok=True)
-    with open(VOUCHER_FILE, 'w') as f:
-        json.dump(VOUCHER_CODES, f, indent=2)
-load_vouchers()
+    try:
+        VOUCHER_CODES = sync_vouchers_from_db()
+        print(f"Loaded {len(VOUCHER_CODES)} vouchers from Supabase")
+    except Exception as e:
+        print(f"Voucher load error: {e}")
+
+    # 3. Tickets: same migration pattern
+    local_ticket_file = "static/tickets.json"
+    if os.path.exists(local_ticket_file):
+        try:
+            with open(local_ticket_file, 'r') as f:
+                local_tickets = json.load(f)
+            if local_tickets:
+                upload_local_tickets_to_supabase(local_tickets)
+                os.rename(local_ticket_file, local_ticket_file + ".migrated")
+                print(f"Migrated {len(local_tickets)} tickets from local JSON")
+        except Exception as e:
+            print(f"Ticket migration warning: {e}")
+
+    try:
+        TICKET_CODES = sync_tickets_from_db()
+        print(f"Loaded {len(TICKET_CODES)} tickets from Supabase")
+    except Exception as e:
+        print(f"Ticket load error: {e}")
+
+    print("═══ Sync complete ═══")
+
+startup_sync()
 
 def get_frames():
     return scan_frames_dir("static/frames")
@@ -155,14 +185,10 @@ def api_create_payment():
         payment = create_payment(order_id, amount=30000)
         create_session(session_id, order_id)
         SESSION_STORE[session_id] = {
-            "order_id": order_id, "photos": [], "frame_id": None, "mirror": False
+            "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+            "created_at": datetime.utcnow()
         }
-        PAYMENT_HISTORY.append({
-            "order_id": order_id, "session_id": session_id,
-            "amount": 30000, "method": "QRIS",
-            "status": "pending", "created_at": datetime.utcnow().isoformat()
-        })
-        save_payment_history()
+        db_insert_payment(order_id, session_id, 30000, "QRIS", "pending")
         return {
             "session_id": session_id,
             "order_id": order_id,
@@ -184,10 +210,7 @@ def api_payment_status(order_id: str):
         if status == "paid":
             if session_id:
                 update_session(session_id, status="paid", paid_at=datetime.utcnow().isoformat())
-            for p in PAYMENT_HISTORY:
-                if p["order_id"] == order_id:
-                    p["status"] = "paid"
-            save_payment_history()
+            db_update_payment_status(order_id, "paid")
         return {"status": status, "session_id": session_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -226,18 +249,18 @@ async def api_claim_voucher(request: Request):
                 
                 # Only decrease count if DB creation succeeded
                 v["uses_left"] -= 1
-                save_vouchers()
+                db_update_voucher_uses(code, v["uses_left"])
                 
                 SESSION_STORE[session_id] = {
-                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False
+                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                    "created_at": datetime.utcnow()
                 }
-                PAYMENT_HISTORY.append({
-                    "order_id": order_id, "session_id": session_id,
-                    "amount": 0, "method": "Voucher",
-                    "status": "paid", "created_at": datetime.utcnow().isoformat()
-                })
-                save_payment_history()
-                return {"valid": True, "session_id": session_id}
+                db_insert_payment(order_id, session_id, 0, "Voucher", "paid")
+                result = {"valid": True, "session_id": session_id}
+                # If voucher has custom frame linked
+                if v.get("custom_frame"):
+                    result["custom_frame"] = v["custom_frame"]
+                return result
         return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
     except Exception as e:
         print(f"Voucher claim error: {e}")
@@ -348,16 +371,7 @@ async def api_finalize_strip(
             strip_url=url, status="completed",
             completed_at=datetime.utcnow().isoformat()
         )
-        entry = {
-            "session_id": session_id,
-            "strip_url": url,
-            "frame": frame_id,
-            "filter": filter_name,
-            "photos": len(data["photos"]),
-            "created_at": datetime.utcnow().isoformat()
-        }
-        PHOTO_HISTORY.append(entry)
-        save_photo_history()
+        # Photo history is now stored in Supabase sessions table (update_session above)
 
         # Save GIF locally and upload to Supabase
         if gif_bytes:
@@ -408,7 +422,6 @@ async def download_proxy(url: str, filename: str):
 @app.get("/download/{session_id}", response_class=HTMLResponse)
 def download_page(session_id: str, request: Request):
     # Fetch session from DB to ensure it works even if server restarts
-    from db import get_session
     session_data = get_session(session_id)
     if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -510,17 +523,6 @@ def admin_page(request: Request):
     return FileResponse("private_admin.html")
 
 # ─── TICKET VALIDATION ───
-TICKET_CODES = {}
-TICKET_FILE = "static/tickets.json"
-def load_tickets():
-    global TICKET_CODES
-    if os.path.exists(TICKET_FILE):
-        with open(TICKET_FILE, 'r') as f:
-            TICKET_CODES = json.load(f)
-def save_tickets():
-    with open(TICKET_FILE, 'w') as f:
-        json.dump(TICKET_CODES, f, indent=2)
-load_tickets()
 
 @app.post("/api/ticket/validate")
 async def api_validate_ticket(request: Request):
@@ -530,17 +532,22 @@ async def api_validate_ticket(request: Request):
         t = TICKET_CODES[code]
         if t.get("uses_left", 0) > 0:
             t["uses_left"] -= 1
-            save_tickets()
+            db_update_ticket_uses(code, t["uses_left"])
             session_id = str(uuid.uuid4())
+            order_id = f"TICKET-{code}"
+            try:
+                create_session(session_id, order_id)
+            except Exception as e:
+                print(f"DB Error creating ticket session: {e}")
             SESSION_STORE[session_id] = {
-                "order_id": f"TICKET-{code}", "photos": [], "frame_id": None, "mirror": False
+                "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                "created_at": datetime.utcnow()
             }
-            PAYMENT_HISTORY.append({
-                "order_id": f"TICKET-{code}", "session_id": session_id,
-                "amount": 0, "method": "Ticket",
-                "status": "paid", "created_at": datetime.utcnow().isoformat()
-            })
-            return {"valid": True, "session_id": session_id}
+            db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
+            result = {"valid": True, "session_id": session_id}
+            if t.get("custom_frame"):
+                result["custom_frame"] = t["custom_frame"]
+            return result
     return {"valid": False}
 
 # ─── ADMIN: FRAMES ───
@@ -565,50 +572,71 @@ async def admin_upload_frame(
     else:
         fname = frame.filename
 
+    # Save locally
     path = os.path.join("static/frames", fname)
     with open(path, 'wb') as f:
         f.write(content)
 
-    # If custom name provided, create JSON sidecar with display name
-    if name:
+    # Detect slots
+    slots = get_frame_slots(path)
+    display = name.strip() if name else fname.replace('.png','').replace('_',' ').title()
+
+    # Upload to Supabase Storage + DB
+    try:
+        storage_url = storage_upload_frame(fname, content)
+        db_upsert_frame(fname, display, slots, storage_url)
+    except Exception as e:
+        print(f"Supabase frame upload error: {e}")
+
+    # Write JSON sidecar locally
+    if name or slots:
         json_path = os.path.splitext(path)[0] + ".json"
         sidecar = {}
         if os.path.exists(json_path):
-            with open(json_path, 'r') as jf:
-                sidecar = json.load(jf)
-        sidecar["display_name"] = name.strip()
+            try:
+                with open(json_path, 'r') as jf:
+                    sidecar = json.load(jf)
+            except: pass
+        if name:
+            sidecar["display_name"] = name.strip()
+        if slots:
+            sidecar["slots"] = slots
         with open(json_path, 'w') as jf:
             json.dump(sidecar, jf, indent=2)
 
-    slots = get_frame_slots(path)
-    display = name.strip() if name else fname.replace('.png','').replace('_',' ').title()
     return {"success": True, "file": fname, "name": display, "slots_detected": len(slots)}
 
 @app.delete("/api/admin/frames/{filename}")
 def admin_delete_frame(filename: str):
+    # Delete locally
     path = os.path.join("static/frames", filename)
     if os.path.exists(path):
         os.remove(path)
         json_path = os.path.splitext(path)[0] + ".json"
         if os.path.exists(json_path):
             os.remove(json_path)
-        return {"success": True}
-    raise HTTPException(404, "Frame not found")
+    # Delete from Supabase
+    try:
+        db_delete_frame(filename)
+    except Exception as e:
+        print(f"Supabase frame delete error: {e}")
+    return {"success": True}
 
 # ─── ADMIN: PAYMENTS & PHOTOS ───
 @app.get("/api/admin/payments")
 def admin_payments():
-    return PAYMENT_HISTORY[-50:]
+    return db_get_all_payments(50)
 
 @app.get("/api/admin/photos")
 def admin_photos(sync: bool = False):
-    if sync:
-        sync_from_supabase()
-    return PHOTO_HISTORY[-100:]
+    return db_get_photo_history(100)
 
 # ─── ADMIN: VOUCHERS ───
 @app.get("/api/admin/vouchers")
 def admin_vouchers():
+    # Return fresh from DB
+    global VOUCHER_CODES
+    VOUCHER_CODES = sync_vouchers_from_db()
     return VOUCHER_CODES
 
 @app.post("/api/admin/vouchers")
@@ -616,10 +644,11 @@ async def admin_create_voucher(request: Request):
     body = await request.json()
     code = body.get("code", "").strip().upper()
     uses = body.get("uses", 1)
+    custom_frame = body.get("custom_frame") or None
     if not code:
         raise HTTPException(400, "Code required")
-    VOUCHER_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat()}
-    save_vouchers()
+    VOUCHER_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat(), "custom_frame": custom_frame}
+    db_upsert_voucher(code, uses, custom_frame)
     return {"success": True, "code": code, "uses": uses}
 
 @app.post("/api/admin/vouchers/generate")
@@ -628,13 +657,13 @@ async def admin_generate_voucher(request: Request):
     import random, string
     body = await request.json()
     uses = body.get("uses", 1)
-    # Generate unique 8-char alphanumeric code
+    custom_frame = body.get("custom_frame") or None
     while True:
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         if code not in VOUCHER_CODES:
             break
-    VOUCHER_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat()}
-    save_vouchers()
+    VOUCHER_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat(), "custom_frame": custom_frame}
+    db_upsert_voucher(code, uses, custom_frame)
     return {"success": True, "code": code, "uses": uses}
 
 @app.delete("/api/admin/vouchers/{code}")
@@ -642,13 +671,14 @@ def admin_delete_voucher(code: str):
     code = code.upper()
     if code in VOUCHER_CODES:
         del VOUCHER_CODES[code]
-        save_vouchers()
-        return {"success": True}
-    raise HTTPException(404, "Voucher not found")
+    db_delete_voucher(code)
+    return {"success": True}
 
 # ─── ADMIN: TICKETS ───
 @app.get("/api/admin/tickets")
 def admin_tickets():
+    global TICKET_CODES
+    TICKET_CODES = sync_tickets_from_db()
     return TICKET_CODES
 
 @app.post("/api/admin/tickets")
@@ -656,10 +686,11 @@ async def admin_create_ticket(request: Request):
     body = await request.json()
     code = body.get("code", "").strip().upper()
     uses = body.get("uses", 1)
+    custom_frame = body.get("custom_frame") or None
     if not code:
         raise HTTPException(400, "Code required")
-    TICKET_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat()}
-    save_tickets()
+    TICKET_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat(), "custom_frame": custom_frame}
+    db_upsert_ticket(code, uses, custom_frame)
     return {"success": True, "code": code, "uses": uses}
 
 @app.post("/api/admin/tickets/generate")
@@ -667,12 +698,13 @@ async def admin_generate_ticket(request: Request):
     import random, string
     body = await request.json()
     uses = body.get("uses", 1)
+    custom_frame = body.get("custom_frame") or None
     while True:
         code = ''.join(random.choices(string.digits, k=12))
         if code not in TICKET_CODES:
             break
-    TICKET_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat()}
-    save_tickets()
+    TICKET_CODES[code] = {"uses_left": uses, "created_at": datetime.utcnow().isoformat(), "custom_frame": custom_frame}
+    db_upsert_ticket(code, uses, custom_frame)
     return {"success": True, "code": code, "uses": uses}
 
 @app.delete("/api/admin/tickets/{code}")
@@ -680,9 +712,8 @@ def admin_delete_ticket(code: str):
     code = code.upper()
     if code in TICKET_CODES:
         del TICKET_CODES[code]
-        save_tickets()
-        return {"success": True}
-    raise HTTPException(404, "Ticket not found")
+    db_delete_ticket(code)
+    return {"success": True}
 
 # Serve static (LAST)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

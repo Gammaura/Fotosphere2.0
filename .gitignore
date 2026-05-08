@@ -1,2 +1,16 @@
 .streamlit/secrets.toml.env
 .env
+static/payments.json
+static/payments.json.migrated
+static/photos.json
+static/photos.json.migrated
+static/vouchers.json
+static/vouchers.json.migrated
+static/tickets.json
+static/tickets.json.migrated
+static/frames/*
+!static/frames/Cinema.png
+!static/frames/Cinema.json
+static/gifs/
+__pycache__/
+*.pyc

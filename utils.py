@@ -17,14 +17,21 @@ def _font(size):
 
 # ── Filters ───────────────────────────────────────────────
 FILTERS = {
+    "Original": lambda i: i,
     "Natural":  lambda i: i,
     "Soft":     lambda i: ImageEnhance.Contrast(i).enhance(0.85),
     "Warm":     lambda i: _warm(i),
-    "Cool":     lambda i: _cool(i),
+    "Cold":     lambda i: _cool(i),
     "B&W":      lambda i: ImageOps.grayscale(i).convert("RGB"),
     "Vintage":  lambda i: _vintage(i),
     "Vivid":    lambda i: ImageEnhance.Contrast(ImageEnhance.Color(i).enhance(1.9)).enhance(1.2),
     "Faded":    lambda i: ImageEnhance.Brightness(ImageEnhance.Color(ImageEnhance.Contrast(i).enhance(0.7)).enhance(0.6)).enhance(1.1),
+    "Dreamy":   lambda i: ImageEnhance.Brightness(ImageEnhance.Contrast(i).enhance(0.75)).enhance(1.15),
+    "Rose":     lambda i: _rose(i),
+    "Sunset":   lambda i: _sunset(i),
+    "Cinematic":lambda i: _cinematic(i),
+    "Polaroid": lambda i: _polaroid(i),
+    "Sepia":    lambda i: _sepia(i),
 }
 
 def _warm(img):
@@ -46,6 +53,43 @@ def _vintage(img):
     r = r.point(lambda x: min(255, int(x * 1.12)))
     b = b.point(lambda x: int(x * 0.88))
     return ImageEnhance.Contrast(Image.merge("RGB", (r, g, b))).enhance(0.88)
+
+def _rose(img):
+    r, g, b = img.split()
+    r = r.point(lambda x: min(255, int(x * 1.15)))
+    g = g.point(lambda x: int(x * 0.92))
+    b = b.point(lambda x: min(255, int(x * 1.08)))
+    return ImageEnhance.Brightness(Image.merge("RGB", (r, g, b))).enhance(1.05)
+
+def _sunset(img):
+    r, g, b = img.split()
+    r = r.point(lambda x: min(255, int(x * 1.25)))
+    g = g.point(lambda x: min(255, int(x * 1.05)))
+    b = b.point(lambda x: int(x * 0.75))
+    return ImageEnhance.Contrast(Image.merge("RGB", (r, g, b))).enhance(1.1)
+
+def _cinematic(img):
+    img = ImageEnhance.Contrast(img).enhance(1.3)
+    img = ImageEnhance.Color(img).enhance(0.8)
+    r, g, b = img.split()
+    b = b.point(lambda x: min(255, int(x * 1.1)))
+    return ImageEnhance.Brightness(Image.merge("RGB", (r, g, b))).enhance(0.9)
+
+def _polaroid(img):
+    img = ImageEnhance.Contrast(img).enhance(0.9)
+    img = ImageEnhance.Brightness(img).enhance(1.1)
+    r, g, b = img.split()
+    r = r.point(lambda x: min(255, int(x * 1.05)))
+    g = g.point(lambda x: min(255, int(x * 1.02)))
+    return Image.merge("RGB", (r, g, b))
+
+def _sepia(img):
+    img = ImageOps.grayscale(img).convert("RGB")
+    r, g, b = img.split()
+    r = r.point(lambda x: min(255, int(x * 1.2)))
+    g = g.point(lambda x: min(255, int(x * 1.0)))
+    b = b.point(lambda x: int(x * 0.8))
+    return Image.merge("RGB", (r, g, b))
 
 def apply_filter(img: Image.Image, name: str) -> Image.Image:
     fn = FILTERS.get(name, lambda i: i)
@@ -157,35 +201,60 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
 
 def get_frame_slots(png_path: str) -> list:
     import json as _json
+    from PIL import Image as _Img
     json_path = os.path.splitext(png_path)[0] + ".json"
     
+    slots = None
     if os.path.exists(json_path):
         try:
             with open(json_path, 'r') as jf:
                 data = _json.load(jf)
                 if "slots" in data and data["slots"]:
-                    return data["slots"]
+                    slots = data["slots"]
         except:
             pass
             
     # Auto-detect if not in JSON or JSON is invalid
-    slots = detect_transparent_slots(png_path)
-    
-    if slots:
-        data = {}
-        if os.path.exists(json_path):
+    if not slots:
+        slots = detect_transparent_slots(png_path)
+        if slots:
+            data = {}
+            if os.path.exists(json_path):
+                try:
+                    with open(json_path, 'r') as jf:
+                        data = _json.load(jf)
+                except:
+                    pass
+            data["slots"] = slots
             try:
-                with open(json_path, 'r') as jf:
-                    data = _json.load(jf)
-            except:
-                pass
-        data["slots"] = slots
-        try:
-            with open(json_path, 'w') as jf:
-                _json.dump(data, jf, indent=2)
-        except Exception as e:
-            print(f"Failed to save slots to {json_path}: {e}")
-            
+                with open(json_path, 'w') as jf:
+                    _json.dump(data, jf, indent=2)
+            except Exception as e:
+                print(f"Failed to save slots to {json_path}: {e}")
+    
+    if not slots:
+        return []
+    
+    # Normalize slot coordinates to match actual image dimensions
+    try:
+        with _Img.open(png_path) as img:
+            fw, fh = img.size
+        max_sx = max(s["x"] + s["w"] for s in slots)
+        max_sy = max(s["y"] + s["h"] for s in slots)
+        if max_sx > fw * 1.05 or max_sy > fh * 1.05:
+            # Use SINGLE uniform scale to preserve aspect ratio
+            # min() ensures no slot overflows the image bounds
+            sc = min(fw / max_sx if max_sx > fw else 1.0,
+                     fh / max_sy if max_sy > fh else 1.0)
+            slots = [{"x": int(s["x"]*sc), "y": int(s["y"]*sc),
+                      "w": int(s["w"]*sc), "h": int(s["h"]*sc)} for s in slots]
+        
+        # Sort slots top-to-bottom, left-to-right
+        row_height = fh / max(1, len(set(s["y"] for s in slots)))
+        slots.sort(key=lambda s: (s["y"] // max(1, int(row_height * 0.5)), s["x"]))
+    except:
+        pass
+    
     return slots
 
 
@@ -286,6 +355,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
             
             with Image.open(fpath) as img:
                 fw, fh = img.size
+            
             n_photos = len(slots)
             layout = "grid" if n_photos > 4 else "strip"
             

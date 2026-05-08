@@ -58,6 +58,7 @@
         <div class="tabs">
             <div class="tab act" onclick="switchTab('frames',this)">🖼️ Frames</div>
             <div class="tab" onclick="switchTab('vouchers',this)">🎟️ Vouchers</div>
+            <div class="tab" onclick="switchTab('tickets',this)">🎫 Tickets</div>
             <div class="tab" onclick="switchTab('payments',this)">💳 Payments</div>
             <div class="tab" onclick="switchTab('photos',this)">📸 Photos</div>
         </div>
@@ -97,6 +98,12 @@
                         <label>Jumlah Pakai</label>
                         <input type="number" id="v-uses" value="1" min="1" style="width:80px">
                     </div>
+                    <div class="field">
+                        <label>Custom Frame (opsional)</label>
+                        <select id="v-frame" style="padding:.5rem .8rem;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-weight:700;font-size:.82rem">
+                            <option value="">— Bebas pilih —</option>
+                        </select>
+                    </div>
                     <button class="btn" onclick="createVoucher()">+ Tambah</button>
                     <button class="btn btn-green" onclick="generateVoucher()">🎲 Generate Unik</button>
                 </div>
@@ -104,8 +111,40 @@
             <div class="card">
                 <div class="card-title">Daftar Voucher</div>
                 <table>
-                    <thead><tr><th>Kode</th><th>Sisa Pakai</th><th>Dibuat</th><th></th></tr></thead>
+                    <thead><tr><th>Kode</th><th>Sisa Pakai</th><th>Custom Frame</th><th>Dibuat</th><th></th></tr></thead>
                     <tbody id="voucher-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TICKETS -->
+        <div id="panel-tickets" class="panel">
+            <div class="card">
+                <div class="card-title">Buat Ticket</div>
+                <div class="voucher-row">
+                    <div class="field">
+                        <label>Kode Ticket</label>
+                        <input type="text" id="t-code" placeholder="Auto-generate jika kosong" style="width:220px">
+                    </div>
+                    <div class="field">
+                        <label>Jumlah Pakai</label>
+                        <input type="number" id="t-uses" value="1" min="1" style="width:80px">
+                    </div>
+                    <div class="field">
+                        <label>Custom Frame (opsional)</label>
+                        <select id="t-frame" style="padding:.5rem .8rem;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-weight:700;font-size:.82rem">
+                            <option value="">— Bebas pilih —</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="createTicket()">+ Tambah</button>
+                    <button class="btn btn-green" onclick="generateTicket()">🎲 Generate Unik</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Daftar Ticket</div>
+                <table>
+                    <thead><tr><th>Kode</th><th>Sisa Pakai</th><th>Custom Frame</th><th>Dibuat</th><th></th></tr></thead>
+                    <tbody id="ticket-list"></tbody>
                 </table>
             </div>
         </div>
@@ -126,7 +165,6 @@
             <div class="card">
                 <div class="card-title">Riwayat Foto 
                     <div style="display:flex;gap:5px">
-                        <button class="btn btn-sm btn-green" onclick="loadPhotos(true)">☁️ Sync Supabase</button>
                         <button class="btn btn-sm" onclick="loadPhotos()">🔄 Refresh</button>
                     </div>
                 </div>
@@ -139,15 +177,28 @@
     </div>
 
     <script>
+        let _allFrames = [];
+
         function switchTab(name, el) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('act'));
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('act'));
             el.classList.add('act');
             document.getElementById('panel-' + name).classList.add('act');
             if (name === 'frames') loadFrames();
-            if (name === 'vouchers') loadVouchers();
+            if (name === 'vouchers') { loadVouchers(); populateFrameSelect('v-frame'); }
+            if (name === 'tickets') { loadTickets(); populateFrameSelect('t-frame'); }
             if (name === 'payments') loadPayments();
             if (name === 'photos') loadPhotos();
+        }
+
+        async function populateFrameSelect(selectId) {
+            if (!_allFrames.length) {
+                const r = await fetch('/api/admin/frames');
+                _allFrames = await r.json();
+            }
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = '<option value="">— Bebas pilih —</option>' +
+                _allFrames.map(f => `<option value="${f.file}">${f.name} (${f.photos} foto)</option>`).join('');
         }
 
         // ═══ FRAMES ═══
@@ -199,7 +250,8 @@
                 <tr>
                     <td><span class="gen-code">${code}</span></td>
                     <td><span class="badge ${v.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${v.uses_left}x</span></td>
-                    <td>${v.created_at || '-'}</td>
+                    <td>${v.custom_frame ? '<span class="badge badge-orange">' + v.custom_frame + '</span>' : '<span style="color:#ccc">—</span>'}</td>
+                    <td style="font-size:.65rem">${v.created_at || '-'}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="deleteVoucher('${code}')">Hapus</button></td>
                 </tr>
             `).join('');
@@ -208,10 +260,11 @@
         async function createVoucher() {
             const code = document.getElementById('v-code').value.trim();
             const uses = parseInt(document.getElementById('v-uses').value) || 1;
+            const custom_frame = document.getElementById('v-frame').value || null;
             if (!code) return alert('Masukkan kode, atau gunakan tombol Generate Unik');
             await fetch('/api/admin/vouchers', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ code, uses })
+                body: JSON.stringify({ code, uses, custom_frame })
             });
             document.getElementById('v-code').value = '';
             loadVouchers();
@@ -219,9 +272,10 @@
 
         async function generateVoucher() {
             const uses = parseInt(document.getElementById('v-uses').value) || 1;
+            const custom_frame = document.getElementById('v-frame').value || null;
             const r = await fetch('/api/admin/vouchers/generate', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ uses })
+                body: JSON.stringify({ uses, custom_frame })
             });
             const d = await r.json();
             alert(`Voucher berhasil dibuat!\n\nKode: ${d.code}\nPakai: ${d.uses}x`);
@@ -233,6 +287,54 @@
             await fetch('/api/admin/vouchers/' + code, { method: 'DELETE' });
             loadVouchers();
         }
+        // ═══ TICKETS ═══
+        async function loadTickets() {
+            const r = await fetch('/api/admin/tickets');
+            const tickets = await r.json();
+            const tb = document.getElementById('ticket-list');
+            const entries = Object.entries(tickets);
+            if (!entries.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Belum ada ticket</td></tr>'; return; }
+            tb.innerHTML = entries.map(([code, t]) => `
+                <tr>
+                    <td><span class="gen-code">${code}</span></td>
+                    <td><span class="badge ${t.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${t.uses_left}x</span></td>
+                    <td>${t.custom_frame ? '<span class="badge badge-orange">' + t.custom_frame + '</span>' : '<span style="color:#ccc">—</span>'}</td>
+                    <td style="font-size:.65rem">${t.created_at || '-'}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteTicket('${code}')">Hapus</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function createTicket() {
+            const code = document.getElementById('t-code').value.trim();
+            const uses = parseInt(document.getElementById('t-uses').value) || 1;
+            const custom_frame = document.getElementById('t-frame').value || null;
+            if (!code) return alert('Masukkan kode, atau gunakan tombol Generate Unik');
+            await fetch('/api/admin/tickets', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ code, uses, custom_frame })
+            });
+            document.getElementById('t-code').value = '';
+            loadTickets();
+        }
+
+        async function generateTicket() {
+            const uses = parseInt(document.getElementById('t-uses').value) || 1;
+            const custom_frame = document.getElementById('t-frame').value || null;
+            const r = await fetch('/api/admin/tickets/generate', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ uses, custom_frame })
+            });
+            const d = await r.json();
+            alert(`Ticket berhasil dibuat!\n\nKode: ${d.code}\nPakai: ${d.uses}x`);
+            loadTickets();
+        }
+
+        async function deleteTicket(code) {
+            if (!confirm('Hapus ticket ' + code + '?')) return;
+            await fetch('/api/admin/tickets/' + code, { method: 'DELETE' });
+            loadTickets();
+        }
 
         // ═══ PAYMENTS ═══
         async function loadPayments() {
@@ -240,11 +342,11 @@
             const payments = await r.json();
             const tb = document.getElementById('payment-list');
             if (!payments.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>'; return; }
-            tb.innerHTML = payments.reverse().map(p => `
+            tb.innerHTML = payments.map(p => `
                 <tr>
                     <td style="font-size:.65rem">${p.order_id}</td>
-                    <td>${p.method}</td>
-                    <td>IDR ${p.amount.toLocaleString()}</td>
+                    <td>${p.method || '-'}</td>
+                    <td>IDR ${(p.amount||0).toLocaleString()}</td>
                     <td><span class="badge ${p.status==='paid'?'badge-green':'badge-orange'}">${p.status}</span></td>
                     <td style="font-size:.65rem">${p.created_at}</td>
                 </tr>
@@ -252,17 +354,16 @@
         }
 
         // ═══ PHOTOS ═══
-        async function loadPhotos(sync = false) {
-            if (sync) alert('Sedang menyinkronkan data dari Supabase... Mohon tunggu sebentar.');
-            const r = await fetch(`/api/admin/photos?sync=${sync}`);
+        async function loadPhotos() {
+            const r = await fetch('/api/admin/photos');
             const photos = await r.json();
             const tb = document.getElementById('photo-list');
             if (!photos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Belum ada foto</td></tr>'; return; }
-            tb.innerHTML = photos.reverse().map(p => `
+            tb.innerHTML = photos.map(p => `
                 <tr>
                     <td style="font-size:.6rem">${p.session_id.substring(0,8)}...</td>
-                    <td>${p.frame}</td>
-                    <td>${p.filter}</td>
+                    <td>${p.frame || '-'}</td>
+                    <td>${p.filter || '-'}</td>
                     <td>${p.photos}</td>
                     <td style="font-size:.65rem">${p.created_at}</td>
                     <td>
