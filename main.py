@@ -483,11 +483,101 @@ def download_page(session_id: str, request: Request):
         clips_btns = "".join([f'<a href="{p(u, f"live_{i+1}.webm")}" download="live_{i+1}.webm" class="btn" style="padding:12px;font-size:0.8rem">📹 CLIP {i+1}</a>' for i, u in enumerate(live_clip_urls)])
         live_frame_html = f"""
             <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
-            <div style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03)">
-                <img src="{frame_thumb}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none">
+            <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111">
+                <img id="live-frame-img" src="{frame_thumb}" crossorigin="anonymous" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none">
                 {slots_html}
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">{clips_btns}</div>
+            <button id="btn-download-live" class="btn" onclick="downloadLiveVideo()" style="margin-bottom:20px">🎥 UNDUH LIVE PHOTO</button>
+            <div id="live-loading" style="display:none;font-size:0.8rem;color:#666;margin-bottom:20px;font-weight:bold">Memproses Video... (Mohon tunggu)</div>
+            
+            <script>
+                async function downloadLiveVideo() {{
+                    const btn = document.getElementById('btn-download-live');
+                    const loader = document.getElementById('live-loading');
+                    btn.style.display = 'none';
+                    loader.style.display = 'block';
+                    
+                    try {{
+                        const container = document.getElementById('live-frame-container');
+                        const videos = container.querySelectorAll('video');
+                        const frameImg = document.getElementById('live-frame-img');
+                        
+                        const cvs = document.createElement('canvas');
+                        cvs.width = {fw};
+                        cvs.height = {fh};
+                        const ctx = cvs.getContext('2d');
+                        
+                        // Restart all videos to sync them
+                        await Promise.all(Array.from(videos).map(v => {{
+                            v.currentTime = 0;
+                            return v.play().catch(e=>console.warn(e));
+                        }}));
+                        
+                        const stream = cvs.captureStream(30);
+                        let mime = 'video/webm;codecs=vp9';
+                        if (!MediaRecorder.isTypeSupported(mime)) {{
+                            mime = 'video/mp4'; // fallback for Safari
+                        }}
+                        
+                        const recorder = new MediaRecorder(stream, {{mimeType: mime}});
+                        const chunks = [];
+                        recorder.ondataavailable = e => {{ if(e.data.size>0) chunks.push(e.data); }};
+                        
+                        let isRecording = true;
+                        
+                        // Render loop
+                        function draw() {{
+                            if (!isRecording) return;
+                            ctx.fillStyle = '#fff';
+                            ctx.fillRect(0,0,cvs.width,cvs.height);
+                            
+                            // Draw videos
+                            const slots = {frame_info["slots"]};
+                            videos.forEach((v, i) => {{
+                                if(i < slots.length && v.readyState >= 2) {{
+                                    const s = slots[i];
+                                    ctx.drawImage(v, s.x, s.y, s.w, s.h);
+                                }}
+                            }});
+                            
+                            // Draw frame
+                            if(frameImg.complete) {{
+                                ctx.drawImage(frameImg, 0, 0, cvs.width, cvs.height);
+                            }}
+                            
+                            requestAnimationFrame(draw);
+                        }}
+                        
+                        recorder.onstop = () => {{
+                            isRecording = false;
+                            const blob = new Blob(chunks, {{type: mime}});
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'fotosphere_live_strip' + (mime.includes('mp4') ? '.mp4' : '.webm');
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            
+                            btn.style.display = 'flex';
+                            loader.style.display = 'none';
+                        }};
+                        
+                        recorder.start(100);
+                        draw();
+                        
+                        // Record for 3.5 seconds
+                        setTimeout(() => {{
+                            recorder.stop();
+                        }}, 3500);
+                        
+                    }} catch (err) {{
+                        console.error(err);
+                        alert('Gagal memproses video live photo.');
+                        btn.style.display = 'flex';
+                        loader.style.display = 'none';
+                    }}
+                }}
+            </script>
         """
 
     html_content = f"""
