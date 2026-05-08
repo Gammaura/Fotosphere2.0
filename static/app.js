@@ -133,14 +133,17 @@ async function capturePhoto(){
     const ctx=cvs.getContext('2d');ctx.save();if(S.mirror){ctx.translate(cvs.width,0);ctx.scale(-1,1)}ctx.drawImage(vid,0,0);ctx.restore();
     const fl=$('cam-flash');fl.style.transition='none';fl.style.opacity='1';setTimeout(()=>{fl.style.transition='opacity .4s';fl.style.opacity='0'},60);
 
-    // Wait a moment then stop live recording
+    // Capture current slot index BEFORE it changes
+    const capturedSlot=S.slot;
+
+    // Save live clip for this slot (wait a moment for last frames)
     setTimeout(async()=>{
         const liveBlob=await saveLiveClip();
-        if(liveBlob)S.liveClips[S.slot]=liveBlob;
+        if(liveBlob)S.liveClips[capturedSlot]=liveBlob;
     },800);
 
     cvs.toBlob(blob=>{
-        S.photos[S.slot]=blob;updateShootPrev();
+        S.photos[capturedSlot]=blob;updateShootPrev();
         const filled=S.photos.filter(p=>p!==null).length;
         if(filled<S.max){for(let i=0;i<S.max;i++){if(S.photos[i]===null){S.slot=i;break}}updateShootPrev();setTimeout(()=>showTapOv(),800)}
     },'image/png');
