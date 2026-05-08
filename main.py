@@ -331,10 +331,11 @@ async def api_finalize_strip(
     request: Request, 
     session_id: str, 
     filter_name: str = Form(...),
-    sticker_overlay: Optional[UploadFile] = File(None)
+    sticker_overlay: Optional[UploadFile] = File(None),
+    live_clips: Optional[List[UploadFile]] = File(None)
 ):
     if session_id not in SESSION_STORE or not SESSION_STORE[session_id]["photos"]:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail="Session not found or no photos")
 
     data = SESSION_STORE[session_id]
     frame_id = data["frame_id"]
