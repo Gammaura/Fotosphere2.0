@@ -7,7 +7,7 @@ html,body{font-family:'Plus Jakarta Sans',sans-serif;width:100%;height:100%;over
 .screen.active{opacity:1;pointer-events:auto;z-index:10}
 
 /* Page frame = outer rounded border seen on every page except home */
-.pageFrame{position:absolute;inset:40px;border:2.5px solid var(--dark);border-radius:var(--r);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;margin:auto}
+.pageFrame{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
 
 /* Center layout helper */
 .vCenter{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;position:relative}
@@ -133,7 +133,7 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .vkb-del:active{background:#c62828}
 
 /* ═══ SPLIT LAYOUT (frame/shoot/emoji/filter pages) ═══ */
-.splitWrap{position:absolute;inset:40px;border:2.5px solid var(--dark);border-radius:var(--r);background:var(--card);overflow:hidden;display:flex;flex-direction:column;margin:auto}
+.splitWrap{position:absolute;inset:0;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
 .splitInner{flex:1;display:flex;gap:40px;padding:54px 50px;min-height:0;align-items:stretch;justify-content:center}
 .splitL{width:900px;flex-shrink:0;display:flex;min-height:0}
 .splitR{width:310px;flex-shrink:0;display:flex;flex-direction:column;min-height:0}
