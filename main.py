@@ -478,10 +478,13 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{live_clip_urls[i]}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none" onerror="this.parentElement.style.background=\'#eee\'"></video></div>'
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{live_clip_urls[i]}" crossorigin="anonymous" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none"></video></div>'
         
-        clips_btns = "".join([f'<a href="{p(u, f"live_{i+1}.webm")}" download="live_{i+1}.webm" class="btn" style="padding:12px;font-size:0.8rem">📹 CLIP {i+1}</a>' for i, u in enumerate(live_clip_urls)])
+        import json as _jsn
+        slots_json = _jsn.dumps(frame_info["slots"])
+        
         live_frame_html = f"""
+            <div id="live-section" style="display:none">
             <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
             <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111">
                 <img id="live-frame-img" src="{frame_thumb}" crossorigin="anonymous" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none">
@@ -489,92 +492,65 @@ def download_page(session_id: str, request: Request):
             </div>
             <button id="btn-download-live" class="btn" onclick="downloadLiveVideo()" style="margin-bottom:20px">🎥 UNDUH LIVE PHOTO</button>
             <div id="live-loading" style="display:none;font-size:0.8rem;color:#666;margin-bottom:20px;font-weight:bold">Memproses Video... (Mohon tunggu)</div>
+            </div>
             
             <script>
+                (function(){{
+                    var sec=document.getElementById('live-section');
+                    if(!sec)return;
+                    var vids=document.querySelectorAll('#live-frame-container video');
+                    var ok=0,fail=0,tot=vids.length;
+                    if(!tot)return;
+                    function chk(){{if(ok>0)sec.style.display='block';if(ok+fail>=tot&&ok===0)sec.style.display='none';}}
+                    vids.forEach(function(v){{v.onloadeddata=function(){{ok++;chk();}};v.onerror=function(){{fail++;v.parentElement.style.background='#333';chk();}}}});
+                    setTimeout(function(){{if(ok===0)sec.style.display='none';}},5000);
+                }})();
+                
                 async function downloadLiveVideo() {{
-                    const btn = document.getElementById('btn-download-live');
-                    const loader = document.getElementById('live-loading');
-                    btn.style.display = 'none';
-                    loader.style.display = 'block';
-                    
+                    var btn=document.getElementById('btn-download-live');
+                    var loader=document.getElementById('live-loading');
+                    btn.style.display='none';loader.style.display='block';
                     try {{
-                        const container = document.getElementById('live-frame-container');
-                        const videos = container.querySelectorAll('video');
-                        const frameImg = document.getElementById('live-frame-img');
-                        
-                        const cvs = document.createElement('canvas');
-                        cvs.width = {fw};
-                        cvs.height = {fh};
-                        const ctx = cvs.getContext('2d');
-                        
-                        // Restart all videos to sync them
-                        await Promise.all(Array.from(videos).map(v => {{
-                            v.currentTime = 0;
-                            return v.play().catch(e=>console.warn(e));
-                        }}));
-                        
-                        const stream = cvs.captureStream(30);
-                        let mime = 'video/webm;codecs=vp9';
-                        if (!MediaRecorder.isTypeSupported(mime)) {{
-                            mime = 'video/mp4'; // fallback for Safari
-                        }}
-                        
-                        const recorder = new MediaRecorder(stream, {{mimeType: mime}});
-                        const chunks = [];
-                        recorder.ondataavailable = e => {{ if(e.data.size>0) chunks.push(e.data); }};
-                        
-                        let isRecording = true;
-                        
-                        // Render loop
-                        function draw() {{
-                            if (!isRecording) return;
-                            ctx.fillStyle = '#fff';
-                            ctx.fillRect(0,0,cvs.width,cvs.height);
-                            
-                            // Draw videos
-                            const slots = {frame_info["slots"]};
-                            videos.forEach((v, i) => {{
-                                if(i < slots.length && v.readyState >= 2) {{
-                                    const s = slots[i];
-                                    ctx.drawImage(v, s.x, s.y, s.w, s.h);
-                                }}
-                            }});
-                            
-                            // Draw frame
-                            if(frameImg.complete) {{
-                                ctx.drawImage(frameImg, 0, 0, cvs.width, cvs.height);
-                            }}
-                            
+                        var container=document.getElementById('live-frame-container');
+                        var videos=container.querySelectorAll('video');
+                        var frameImg=document.getElementById('live-frame-img');
+                        var ready=Array.from(videos).filter(function(v){{return v.readyState>=2;}});
+                        if(ready.length===0){{alert('Video belum dimuat.');btn.style.display='flex';loader.style.display='none';return;}}
+                        var cvs=document.createElement('canvas');cvs.width={fw};cvs.height={fh};
+                        var ctx=cvs.getContext('2d');
+                        await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
+                        await new Promise(function(r){{setTimeout(r,200);}});
+                        var stream=cvs.captureStream(30);
+                        var mime='video/webm;codecs=vp9';
+                        if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';
+                        if(!MediaRecorder.isTypeSupported(mime))mime='video/mp4';
+                        var recorder=new MediaRecorder(stream,{{mimeType:mime}});
+                        var chunks=[];
+                        recorder.ondataavailable=function(e){{if(e.data.size>0)chunks.push(e.data);}};
+                        var recording=true;
+                        var slots={slots_json};
+                        function draw(){{
+                            if(!recording)return;
+                            ctx.fillStyle='#fff';ctx.fillRect(0,0,cvs.width,cvs.height);
+                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x,s.y,s.w,s.h);}}}});
+                            if(frameImg.complete)ctx.drawImage(frameImg,0,0,cvs.width,cvs.height);
                             requestAnimationFrame(draw);
                         }}
-                        
-                        recorder.onstop = () => {{
-                            isRecording = false;
-                            const blob = new Blob(chunks, {{type: mime}});
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'fotosphere_live_strip' + (mime.includes('mp4') ? '.mp4' : '.webm');
-                            a.click();
+                        recorder.onstop=function(){{
+                            recording=false;
+                            var blob=new Blob(chunks,{{type:mime}});
+                            var url=URL.createObjectURL(blob);
+                            var a=document.createElement('a');a.href=url;
+                            a.download='fotosphere_live.'+(mime.indexOf('mp4')>=0?'mp4':'webm');
+                            document.body.appendChild(a);a.click();document.body.removeChild(a);
                             URL.revokeObjectURL(url);
-                            
-                            btn.style.display = 'flex';
-                            loader.style.display = 'none';
+                            btn.style.display='flex';loader.style.display='none';
                         }};
-                        
-                        recorder.start(100);
-                        draw();
-                        
-                        // Record for 3.5 seconds
-                        setTimeout(() => {{
-                            recorder.stop();
-                        }}, 3500);
-                        
-                    }} catch (err) {{
-                        console.error(err);
-                        alert('Gagal memproses video live photo.');
-                        btn.style.display = 'flex';
-                        loader.style.display = 'none';
+                        recorder.start(100);draw();
+                        setTimeout(function(){{recorder.stop();}},3500);
+                    }} catch(err) {{
+                        console.error(err);alert('Gagal: '+err.message);
+                        btn.style.display='flex';loader.style.display='none';
                     }}
                 }}
             </script>
