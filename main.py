@@ -437,13 +437,8 @@ def download_page(session_id: str, request: Request):
         base_path = strip_url.rsplit("/", 1)[0]
         gif_url = f"{base_path}/anim.gif"
         if not photo_urls:
-            # Fallback if photo_urls not in DB
-            photos_count = 0
-            for p in PHOTO_HISTORY:
-                if p["session_id"] == session_id:
-                    photos_count = p["photos"]
-                    break
-            photo_urls = [f"{base_path}/photo_{i}.png" for i in range(photos_count)]
+            # Fallback: guess photo URLs from strip URL pattern
+            photo_urls = [f"{base_path}/photo_{i}.png" for i in range(6)]
     
     import urllib.parse
     def p(u, f): 
