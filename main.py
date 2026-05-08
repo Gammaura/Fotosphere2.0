@@ -383,6 +383,19 @@ async def api_finalize_strip(
                 f.write(gif_bytes)
             gif_url = upload_file(session_id, "anim.gif", gif_bytes, "image/gif")
 
+        # Upload live photo clips (webm) to Supabase
+        live_urls = []
+        if live_clips:
+            for i, clip in enumerate(live_clips):
+                if clip and clip.filename:
+                    try:
+                        clip_bytes = await clip.read()
+                        if len(clip_bytes) > 0:
+                            clip_url = upload_file(session_id, f"live_{i}.webm", clip_bytes, "video/webm")
+                            live_urls.append(clip_url)
+                    except Exception as e:
+                        print(f"Failed to upload live clip {i}: {e}")
+
         del SESSION_STORE[session_id]
 
         # Generate download URL pointing back to our server
@@ -440,10 +453,29 @@ def download_page(session_id: str, request: Request):
             # Fallback: guess photo URLs from strip URL pattern
             photo_urls = [f"{base_path}/photo_{i}.png" for i in range(6)]
     
+    # Build live clip URLs from the same base path
+    live_clip_urls = []
+    if strip_url:
+        base_path = strip_url.rsplit("/", 1)[0]
+        # Check which live clips exist (we uploaded up to 6)
+        for i in range(6):
+            live_clip_urls.append(f"{base_path}/live_{i}.webm")
+
     import urllib.parse
     def p(u, f): 
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}"
+
+    # Build live clips HTML
+    live_clips_html = ""
+    if live_clip_urls:
+        clips = "".join([f'<div><video src="{u}" autoplay loop muted playsinline style="width:100%;border-radius:12px;margin-bottom:8px"></video><a href="{p(u, f"live_photo_{i+1}.webm")}" download="live_photo_{i+1}.webm" class="btn" style="padding:12px;font-size:0.8rem">CLIP {i+1}</a></div>' for i, u in enumerate(live_clip_urls)])
+        live_clips_html = f"""
+            <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
+            <div class="grid">
+                {clips}
+            </div>
+        """
 
     html_content = f"""
     <!DOCTYPE html>
@@ -461,7 +493,7 @@ def download_page(session_id: str, request: Request):
             .sub {{ color: #666; font-size: 0.9rem; margin-bottom: 30px; }}
             h2 {{ font-weight: 800; font-size: 1.1rem; margin-top: 40px; margin-bottom: 20px; color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 10px; }}
             h2::before, h2::after {{ content: ''; flex: 1; height: 1px; background: #eee; }}
-            img {{ max-width: 100%; border-radius: 16px; margin-bottom: 20px; background: #fdfdfd; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }}
+            img, video {{ max-width: 100%; border-radius: 16px; margin-bottom: 20px; background: #fdfdfd; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }}
             .btn {{ display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--dark); color: #fff; padding: 18px; border-radius: 20px; text-decoration: none; font-weight: 700; transition: 0.2s; margin-bottom: 15px; border: none; width: 100%; box-sizing: border-box; }}
             .btn-pink {{ background: var(--pink); }}
             .btn:active {{ transform: scale(0.96); opacity: 0.9; }}
@@ -479,9 +511,11 @@ def download_page(session_id: str, request: Request):
             <img src="{strip_url}" alt="Strip">
             <a href="{p(strip_url, 'fotosphere_strip.png')}" download="fotosphere_strip.png" class="btn btn-pink">UNDUH HASIL STRIP</a>
 
-            <h2>✨ LIVE PHOTO <span class="live-badge">Bergerak</span></h2>
+            <h2>✨ GIF <span class="live-badge">Bergerak</span></h2>
             <img src="{gif_url}" alt="Live Photo">
-            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH LIVE PHOTO</a>
+            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH GIF</a>
+
+            {live_clips_html}
 
             <h2>🎞️ FOTO ORIGINAL</h2>
             <div class="grid">
