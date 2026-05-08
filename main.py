@@ -215,6 +215,43 @@ def api_payment_status(order_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/payment/webhook")
+async def api_payment_webhook(request: Request):
+    try:
+        data = await request.json()
+        order_id = data.get("order_id")
+        transaction_status = data.get("transaction_status")
+        fraud_status = data.get("fraud_status")
+        
+        if not order_id or not transaction_status:
+            return {"status": "ignored"}
+            
+        is_paid = False
+        if transaction_status == 'capture':
+            if fraud_status == 'challenge':
+                is_paid = False
+            elif fraud_status == 'accept':
+                is_paid = True
+        elif transaction_status == 'settlement':
+            is_paid = True
+            
+        if is_paid:
+            db_update_payment_status(order_id, "paid")
+            session_id = None
+            for sid, sdata in SESSION_STORE.items():
+                if sdata.get("order_id") == order_id:
+                    session_id = sid
+                    break
+            if session_id:
+                update_session(session_id, status="paid", paid_at=datetime.utcnow().isoformat())
+        elif transaction_status in ['cancel', 'deny', 'expire']:
+            db_update_payment_status(order_id, transaction_status)
+            
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.get("/api/config")
 def api_get_config():
     frames = get_frames()
