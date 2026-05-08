@@ -435,46 +435,59 @@ async def download_proxy(url: str, filename: str):
 
 @app.get("/download/{session_id}", response_class=HTMLResponse)
 def download_page(session_id: str, request: Request):
-    # Fetch session from DB to ensure it works even if server restarts
     session_data = get_session(session_id)
     if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
 
     strip_url = session_data.get("strip_url", "")
     photo_urls = session_data.get("photo_urls", [])
+    frame_choice = session_data.get("frame_choice", "")
     
-    # We uploaded the GIF to Supabase, but its URL is not in DB.
-    # However, we know the path pattern: https://.../fotobox-photos/{session_id}/anim.gif
+    # Get frame metadata for live photo frame view
+    frame_info = None
+    if frame_choice:
+        frames = get_frames()
+        for f in frames:
+            if f["id"] == frame_choice:
+                frame_info = f
+                break
+    
     gif_url = ""
+    base_path = ""
     if strip_url:
         base_path = strip_url.rsplit("/", 1)[0]
         gif_url = f"{base_path}/anim.gif"
         if not photo_urls:
-            # Fallback: guess photo URLs from strip URL pattern
             photo_urls = [f"{base_path}/photo_{i}.png" for i in range(6)]
     
-    # Build live clip URLs from the same base path
-    live_clip_urls = []
-    if strip_url:
-        base_path = strip_url.rsplit("/", 1)[0]
-        # Check which live clips exist (we uploaded up to 6)
-        for i in range(6):
-            live_clip_urls.append(f"{base_path}/live_{i}.webm")
+    n_clips = frame_info["photos"] if frame_info else 6
+    live_clip_urls = [f"{base_path}/live_{i}.webm" for i in range(n_clips)] if base_path else []
 
     import urllib.parse
     def p(u, f): 
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}"
 
-    # Build live clips HTML
-    live_clips_html = ""
-    if live_clip_urls:
-        clips = "".join([f'<div><video src="{u}" autoplay loop muted playsinline style="width:100%;border-radius:12px;margin-bottom:8px"></video><a href="{p(u, f"live_photo_{i+1}.webm")}" download="live_photo_{i+1}.webm" class="btn" style="padding:12px;font-size:0.8rem">CLIP {i+1}</a></div>' for i, u in enumerate(live_clip_urls)])
-        live_clips_html = f"""
+    # Build live photo frame HTML (videos inside frame slots)
+    live_frame_html = ""
+    if frame_info and live_clip_urls:
+        fw, fh = frame_info["width"], frame_info["height"]
+        frame_thumb = f"/frames/{frame_info['file']}"
+        slots_html = ""
+        for i, s in enumerate(frame_info["slots"]):
+            if i >= len(live_clip_urls): break
+            lp = s["x"]/fw*100; tp = s["y"]/fh*100
+            wp = s["w"]/fw*100; hp = s["h"]/fh*100
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{live_clip_urls[i]}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none" onerror="this.parentElement.style.background=\'#eee\'"></video></div>'
+        
+        clips_btns = "".join([f'<a href="{p(u, f"live_{i+1}.webm")}" download="live_{i+1}.webm" class="btn" style="padding:12px;font-size:0.8rem">📹 CLIP {i+1}</a>' for i, u in enumerate(live_clip_urls)])
+        live_frame_html = f"""
             <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
-            <div class="grid">
-                {clips}
+            <div style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03)">
+                <img src="{frame_thumb}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none">
+                {slots_html}
             </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">{clips_btns}</div>
         """
 
     html_content = f"""
@@ -511,11 +524,11 @@ def download_page(session_id: str, request: Request):
             <img src="{strip_url}" alt="Strip">
             <a href="{p(strip_url, 'fotosphere_strip.png')}" download="fotosphere_strip.png" class="btn btn-pink">UNDUH HASIL STRIP</a>
 
-            <h2>✨ GIF <span class="live-badge">Bergerak</span></h2>
-            <img src="{gif_url}" alt="Live Photo">
-            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH GIF</a>
+            {live_frame_html}
 
-            {live_clips_html}
+            <h2>✨ GIF <span class="live-badge">Bergerak</span></h2>
+            <img src="{gif_url}" alt="GIF">
+            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH GIF</a>
 
             <h2>🎞️ FOTO ORIGINAL</h2>
             <div class="grid">

@@ -103,12 +103,32 @@ function showTapOv(){$('cam-tap').classList.remove('hidden');$('cam-tap-sub').te
 function tapToShoot(){$('cam-tap').classList.add('hidden');document.querySelector('.cropGuide').style.display='block';setTimeout(()=>updateCropGuide(),100);startCountdown()}
 
 // Live Photo recording
-let _mediaRec=null,_liveChunks=[];
+let _mediaRec=null,_liveChunks=[],_liveCvs=null,_liveCvsInterval=null;
 function startLiveRec(){
     if(!S.livePhoto||!S.stream)return;
-    try{_liveChunks=[];_mediaRec=new MediaRecorder(S.stream,{mimeType:'video/webm;codecs=vp9'});_mediaRec.ondataavailable=e=>{if(e.data.size>0)_liveChunks.push(e.data)};_mediaRec.start(100)}catch(e){console.log('MediaRecorder not supported:',e)}
+    try{
+        _liveChunks=[];
+        let recStream=S.stream;
+        if(S.mirror){
+            const vid=$('cam-vid');
+            _liveCvs=document.createElement('canvas');
+            _liveCvs.width=vid.videoWidth||1280;
+            _liveCvs.height=vid.videoHeight||960;
+            const ctx=_liveCvs.getContext('2d');
+            _liveCvsInterval=setInterval(()=>{
+                ctx.save();ctx.translate(_liveCvs.width,0);ctx.scale(-1,1);
+                ctx.drawImage(vid,0,0,_liveCvs.width,_liveCvs.height);
+                ctx.restore();
+            },33);
+            recStream=_liveCvs.captureStream(30);
+        }
+        _mediaRec=new MediaRecorder(recStream,{mimeType:'video/webm;codecs=vp9'});
+        _mediaRec.ondataavailable=e=>{if(e.data.size>0)_liveChunks.push(e.data)};
+        _mediaRec.start(100);
+    }catch(e){console.log('MediaRecorder not supported:',e)}
 }
 function stopLiveRec(){
+    if(_liveCvsInterval){clearInterval(_liveCvsInterval);_liveCvsInterval=null;_liveCvs=null}
     if(_mediaRec&&_mediaRec.state!=='inactive'){try{_mediaRec.stop()}catch(e){}_mediaRec=null}
 }
 function saveLiveClip(){
@@ -116,6 +136,7 @@ function saveLiveClip(){
         if(!_mediaRec||_liveChunks.length===0){resolve(null);return}
         _mediaRec.onstop=()=>{const blob=new Blob(_liveChunks,{type:'video/webm'});_liveChunks=[];resolve(blob)};
         try{_mediaRec.stop()}catch(e){resolve(null)}_mediaRec=null;
+        if(_liveCvsInterval){clearInterval(_liveCvsInterval);_liveCvsInterval=null;_liveCvs=null}
     });
 }
 
