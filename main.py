@@ -366,16 +366,20 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
 
     photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
     slots = get_frame_slots(frame_path)
-    result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
-
-    # Resize
-    max_h = 400 if thumb else 1200
-    if result.height > max_h:
-        ratio = max_h / result.height
-        result = result.resize((int(result.width * ratio), max_h), Image.LANCZOS)
+    
+    # If thumbnail is requested, limit max_width to 300 to save memory on concurrent requests
+    # Main preview (thumb=0) is limited to 800px because it's just for the UI
+    max_w = 300 if thumb else 800
+    result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name, max_w)
 
     fmt = "JPEG"
-    return Response(content=pil_to_bytes(result, fmt), media_type=f"image/{fmt.lower()}")
+    # Compress aggressive for thumbnails
+    quality = 60 if thumb else 90
+    
+    buf = io.BytesIO()
+    result.save(buf, format=fmt, quality=quality)
+    import gc; del result; del photos_pil; gc.collect()
+    return Response(content=buf.getvalue(), media_type=f"image/{fmt.lower()}")
 
 @app.post("/api/session/{session_id}/finalize")
 async def api_finalize_strip(

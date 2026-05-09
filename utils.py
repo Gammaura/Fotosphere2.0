@@ -259,7 +259,7 @@ def get_frame_slots(png_path: str) -> list:
 
 
 def composite_photos_on_frame(frame_path: str, photos: list, slots: list, 
-                                filter_name: str = "Natural") -> Image.Image:
+                                filter_name: str = "Natural", max_width: int = 1800) -> Image.Image:
     """
     Composite photos onto a PNG frame template.
     Photos are placed BEHIND the frame so the frame decorations cover edges.
@@ -267,13 +267,11 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
     frame = Image.open(frame_path).convert("RGBA")
     fw, fh = frame.size
     
-    # Memory Optimization: Limit internal resolution to max 1800px width
-    # This prevents OOM on Railway 512MB limit while maintaining Ultra HD quality
-    MAX_WIDTH = 1800
+    # Memory Optimization: Limit internal resolution to prevent OOM
     scale = 1.0
-    if fw > MAX_WIDTH:
-        scale = MAX_WIDTH / fw
-        fw = MAX_WIDTH
+    if fw > max_width:
+        scale = max_width / fw
+        fw = max_width
         fh = int(frame.height * scale)
         frame = frame.resize((fw, fh), Image.LANCZOS)
     

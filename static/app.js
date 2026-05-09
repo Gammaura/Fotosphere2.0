@@ -234,7 +234,7 @@ function renderFilters(){
     S.filters.forEach(f=>{
         if(f.name==='Original')return; // skip Original, use Natural instead
         const d=document.createElement('div');d.className='filterItem'+(S.filter===f.name?' sel':'');d.dataset.name=f.name;
-        const thumbUrl=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(f.name)}`;
+        const thumbUrl=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(f.name)}&thumb=1`;
         d.innerHTML=`<div class="fltCircle"><img class="fltThumb" src="${thumbUrl}" loading="lazy"></div><div class="fltN">${f.name}</div>`;
         d.onclick=()=>{S.filter=f.name;renderFilters();loadPreview();$('filter-status').textContent=f.name};
         g.appendChild(d);
