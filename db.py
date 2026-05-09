@@ -354,6 +354,34 @@ def db_get_all_payments(limit: int = 100) -> list:
     res = sb.table("payments").select("*").order("created_at", desc=True).limit(limit).execute()
     return res.data or []
 
+def upload_local_payments_to_supabase(payments_list: list):
+    """Migrate local payments.json to Supabase (one-time)."""
+    try:
+        existing = {r["order_id"] for r in db_get_all_payments(limit=1000)}
+        count = 0
+        for p in payments_list:
+            # Note: For vouchers/tickets, if multiple sessions use the same code,
+            # order_id might be duplicate in the JSON if not handled well, but
+            # in JSON it shows "VOUCHER-TEST" multiple times.
+            # Supabase payments table has order_id as UNIQUE.
+            # To handle duplicate order_ids for vouchers, we might need to append session_id.
+            order_id = p.get("order_id")
+            if "VOUCHER" in order_id or "TICKET" in order_id:
+                order_id = f"{order_id}_{p.get('session_id')[:8]}"
+            
+            if order_id not in existing:
+                db_insert_payment(
+                    order_id=order_id,
+                    session_id=p.get("session_id", ""),
+                    amount=p.get("amount", 0),
+                    method=p.get("method", "Unknown"),
+                    status=p.get("status", "paid")
+                )
+                count += 1
+        print(f"Migrated {count} payments to Supabase.")
+    except Exception as e:
+        print(f"Payment migration error: {e}")
+
 def db_get_photo_history(limit: int = 100) -> list:
     """Get completed sessions as photo history."""
     sb = get_supabase()
@@ -366,6 +394,17 @@ def db_get_photo_history(limit: int = 100) -> list:
         .limit(limit)
         .execute()
     )
+    
+    session_ids = [item["id"] for item in (res.data or [])]
+    payment_map = {}
+    if session_ids:
+        try:
+            pay_res = sb.table("payments").select("session_id, method").in_("session_id", session_ids).execute()
+            for p in (pay_res.data or []):
+                payment_map[p["session_id"]] = p.get("method", "Unknown")
+        except Exception as e:
+            print(f"Failed to fetch payment methods for photo history: {e}")
+
     results = []
     for item in res.data or []:
         results.append({
@@ -374,6 +413,7 @@ def db_get_photo_history(limit: int = 100) -> list:
             "filter": item.get("filter_choice", "Natural"),
             "photos": len(item.get("photo_urls", []) or []),
             "strip_url": item.get("strip_url", ""),
-            "created_at": item.get("created_at", "")
+            "created_at": item.get("created_at", ""),
+            "method": payment_map.get(item["id"], "-")
         })
     return results

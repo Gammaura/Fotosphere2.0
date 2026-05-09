@@ -79,7 +79,7 @@ function backToFrame(){stopCam();show('frame')}
 async function goToShoot(){
     if(!S.frame)return;S.photos=new Array(S.max).fill(null);S.slot=0;S.liveClips=new Array(S.max).fill(null);
     loader('MENGAKSES KAMERA...');
-    try{S.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:960},facingMode:'user'},audio:false});
+    try{S.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:3840},height:{ideal:2160},facingMode:'user'},audio:false});
     const v=$('cam-vid');v.srcObject=S.stream;v.style.transform=S.mirror?'scaleX(-1)':'none';await v.play();
     noloader();show('shoot');$('shoot-frame-name').textContent=S.frame.name;$('shoot-photo-total').textContent=S.max+' Photo';updateShootPrev();showTapOv();}
     catch(e){noloader();showModal('Gagal','Kamera error: '+e.message,'📷')}
@@ -112,8 +112,8 @@ function startLiveRec(){
         if(S.mirror){
             const vid=$('cam-vid');
             _liveCvs=document.createElement('canvas');
-            _liveCvs.width=vid.videoWidth||1280;
-            _liveCvs.height=vid.videoHeight||960;
+            _liveCvs.width=vid.videoWidth||3840;
+            _liveCvs.height=vid.videoHeight||2160;
             const ctx=_liveCvs.getContext('2d');
             _liveCvsInterval=setInterval(()=>{
                 ctx.save();ctx.translate(_liveCvs.width,0);ctx.scale(-1,1);

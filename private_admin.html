@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 <table>
-                    <thead><tr><th>Session</th><th>Frame</th><th>Filter</th><th>Foto</th><th>Waktu</th><th>Strip</th></tr></thead>
+                    <thead><tr><th>Session</th><th>Frame</th><th>Filter</th><th>Foto</th><th>Metode</th><th>Waktu</th><th>Strip</th></tr></thead>
                     <tbody id="photo-list"></tbody>
                 </table>
             </div>
@@ -246,15 +246,18 @@
             const tb = document.getElementById('voucher-list');
             const entries = Object.entries(vouchers);
             if (!entries.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Belum ada voucher</td></tr>'; return; }
-            tb.innerHTML = entries.map(([code, v]) => `
+            tb.innerHTML = entries.map(([code, v]) => {
+                let dateStr = v.created_at || '-';
+                try { if(dateStr!=='-') dateStr = new Date(dateStr).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}); } catch(e){}
+                return `
                 <tr>
                     <td><span class="gen-code">${code}</span></td>
                     <td><span class="badge ${v.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${v.uses_left}x</span></td>
                     <td>${v.custom_frame ? '<span class="badge badge-orange">' + v.custom_frame + '</span>' : '<span style="color:#ccc">—</span>'}</td>
-                    <td style="font-size:.65rem">${v.created_at || '-'}</td>
+                    <td style="font-size:.65rem">${dateStr}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="deleteVoucher('${code}')">Hapus</button></td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         async function createVoucher() {
@@ -294,15 +297,18 @@
             const tb = document.getElementById('ticket-list');
             const entries = Object.entries(tickets);
             if (!entries.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Belum ada ticket</td></tr>'; return; }
-            tb.innerHTML = entries.map(([code, t]) => `
+            tb.innerHTML = entries.map(([code, t]) => {
+                let dateStr = t.created_at || '-';
+                try { if(dateStr!=='-') dateStr = new Date(dateStr).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}); } catch(e){}
+                return `
                 <tr>
                     <td><span class="gen-code">${code}</span></td>
                     <td><span class="badge ${t.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${t.uses_left}x</span></td>
                     <td>${t.custom_frame ? '<span class="badge badge-orange">' + t.custom_frame + '</span>' : '<span style="color:#ccc">—</span>'}</td>
-                    <td style="font-size:.65rem">${t.created_at || '-'}</td>
+                    <td style="font-size:.65rem">${dateStr}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="deleteTicket('${code}')">Hapus</button></td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         async function createTicket() {
@@ -342,15 +348,18 @@
             const payments = await r.json();
             const tb = document.getElementById('payment-list');
             if (!payments.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>'; return; }
-            tb.innerHTML = payments.map(p => `
+            tb.innerHTML = payments.map(p => {
+                let dateStr = p.created_at;
+                try { dateStr = new Date(p.created_at).toLocaleDateString('id-ID', {weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}); } catch(e){}
+                return `
                 <tr>
                     <td style="font-size:.65rem">${p.order_id}</td>
                     <td>${p.method || '-'}</td>
                     <td>IDR ${(p.amount||0).toLocaleString()}</td>
                     <td><span class="badge ${p.status==='paid'?'badge-green':'badge-orange'}">${p.status}</span></td>
-                    <td style="font-size:.65rem">${p.created_at}</td>
+                    <td style="font-size:.65rem">${dateStr}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         // ═══ PHOTOS ═══
@@ -358,14 +367,18 @@
             const r = await fetch('/api/admin/photos');
             const photos = await r.json();
             const tb = document.getElementById('photo-list');
-            if (!photos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Belum ada foto</td></tr>'; return; }
-            tb.innerHTML = photos.map(p => `
+            if (!photos.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Belum ada foto</td></tr>'; return; }
+            tb.innerHTML = photos.map(p => {
+                let dateStr = p.created_at;
+                try { dateStr = new Date(p.created_at).toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'}); } catch(e){}
+                return `
                 <tr>
                     <td style="font-size:.6rem">${p.session_id.substring(0,8)}...</td>
                     <td>${p.frame || '-'}</td>
                     <td>${p.filter || '-'}</td>
                     <td>${p.photos}</td>
-                    <td style="font-size:.65rem">${p.created_at}</td>
+                    <td><span class="badge badge-gray">${p.method}</span></td>
+                    <td style="font-size:.65rem">${dateStr}</td>
                     <td>
                         <div style="display:flex;gap:5px">
                             <a href="${p.strip_url}" target="_blank" class="btn btn-sm">Strip</a>
@@ -373,7 +386,7 @@
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         loadFrames();

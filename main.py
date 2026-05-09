@@ -131,6 +131,20 @@ def startup_sync():
     except Exception as e:
         print(f"Ticket load error: {e}")
 
+    # 4. Payments: migrate local JSON if exists
+    from db import upload_local_payments_to_supabase
+    local_payment_file = "static/payments.json"
+    if os.path.exists(local_payment_file):
+        try:
+            with open(local_payment_file, 'r') as f:
+                local_payments = json.load(f)
+            if local_payments:
+                upload_local_payments_to_supabase(local_payments)
+                os.rename(local_payment_file, local_payment_file + ".migrated")
+                print(f"Migrated {len(local_payments)} payments from local JSON")
+        except Exception as e:
+            print(f"Payment migration warning: {e}")
+
     print("═══ Sync complete ═══")
 
 startup_sync()
@@ -462,15 +476,16 @@ async def api_finalize_strip(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/download-proxy")
-async def download_proxy(url: str, filename: str):
+async def download_proxy(url: str, filename: str, inline: bool = False):
     import requests
     try:
         r = requests.get(url, stream=True)
         r.raise_for_status()
+        disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
         return StreamingResponse(
             r.iter_content(chunk_size=1024*10),
             headers={
-                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Disposition": disposition,
                 "Content-Type": r.headers.get("Content-Type", "application/octet-stream")
             }
         )
@@ -512,6 +527,10 @@ def download_page(session_id: str, request: Request):
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}"
 
+    def p_inline(u, f):
+        safe_url = urllib.parse.quote(u, safe='')
+        return f"/api/download-proxy?url={safe_url}&filename={f}&inline=true"
+
     # Build live photo frame HTML (videos inside frame slots)
     live_frame_html = ""
     if frame_info and live_clip_urls:
@@ -522,7 +541,8 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{live_clip_urls[i]}" crossorigin="anonymous" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none"></video></div>'
+            v_url = p_inline(live_clip_urls[i], f'live_{i}.webm')
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{v_url}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])
@@ -560,7 +580,7 @@ def download_page(session_id: str, request: Request):
                         var frameImg=document.getElementById('live-frame-img');
                         var ready=Array.from(videos).filter(function(v){{return v.readyState>=2;}});
                         if(ready.length===0){{alert('Video belum dimuat.');btn.style.display='flex';loader.style.display='none';return;}}
-                        var maxD=1080;
+                        var maxD=2160; // Ultra HD limit
                         var rw={fw}, rh={fh};
                         if(rw>maxD || rh>maxD){{ var rat=Math.min(maxD/rw, maxD/rh); rw=Math.floor(rw*rat); rh=Math.floor(rh*rat); }}
                         var cvs=document.createElement('canvas');cvs.width=rw;cvs.height=rh;
@@ -782,7 +802,7 @@ def admin_delete_frame(filename: str):
 # ─── ADMIN: PAYMENTS & PHOTOS ───
 @app.get("/api/admin/payments")
 def admin_payments():
-    return db_get_all_payments(50)
+    return db_get_all_payments(500)
 
 @app.get("/api/admin/photos")
 def admin_photos(sync: bool = False):
