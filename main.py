@@ -579,10 +579,8 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            # Use the proxy inline to completely bypass CORS issues on Canvas Tainting and iOS Safari
             v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
-            # Removed crossorigin="anonymous" since it's now same-origin via the proxy
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0)"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])
@@ -590,8 +588,8 @@ def download_page(session_id: str, request: Request):
         live_frame_html = f"""
             <div id="live-section" style="display:none">
             <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
-            <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111;transform:translateZ(0);-webkit-transform:translateZ(0)">
-                <img id="live-frame-img" src="{frame_thumb}" crossorigin="anonymous" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none;transform:translateZ(0);-webkit-transform:translateZ(0)">
+            <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111;">
+                <img id="live-frame-img" src="{frame_thumb}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none;">
                 {slots_html}
             </div>
             <button id="btn-download-live" class="btn" onclick="downloadLiveVideo()" style="margin-bottom:20px">🎥 UNDUH LIVE PHOTO</button>
