@@ -541,8 +541,8 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            v_url = p_inline(live_clip_urls[i], f'live_{i}.webm')
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{v_url}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
+            v_url = live_clip_urls[i]
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden"><video src="{v_url}" crossorigin="anonymous" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])

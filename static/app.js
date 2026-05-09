@@ -122,10 +122,22 @@ function startLiveRec(){
             },33);
             recStream=_liveCvs.captureStream(30);
         }
-        _mediaRec=new MediaRecorder(recStream,{mimeType:'video/webm;codecs=vp9', videoBitsPerSecond: 2500000});
+        let mime='video/webm;codecs=vp9';
+        if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';
+        if(!MediaRecorder.isTypeSupported(mime))mime='video/mp4';
+        _mediaRec=new MediaRecorder(recStream,{mimeType:mime, videoBitsPerSecond: 2500000});
         _mediaRec.ondataavailable=e=>{if(e.data.size>0)_liveChunks.push(e.data)};
         _mediaRec.start(100);
-    }catch(e){console.log('MediaRecorder not supported:',e)}
+    }catch(e){
+        console.log('MediaRecorder with high bitrate failed, trying default:',e);
+        try {
+            _mediaRec=new MediaRecorder(recStream);
+            _mediaRec.ondataavailable=e=>{if(e.data.size>0)_liveChunks.push(e.data)};
+            _mediaRec.start(100);
+        }catch(e2){
+            console.log('MediaRecorder completely failed:', e2);
+        }
+    }
 }
 function stopLiveRec(){
     if(_liveCvsInterval){clearInterval(_liveCvsInterval);_liveCvsInterval=null;_liveCvs=null}
