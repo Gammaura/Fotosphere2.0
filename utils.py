@@ -267,9 +267,9 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
     frame = Image.open(frame_path).convert("RGBA")
     fw, fh = frame.size
     
-    # Memory Optimization: Limit internal resolution to max 2400px width
-    # This prevents OOM on massive 4K/8K frames while maintaining Ultra HD quality
-    MAX_WIDTH = 2400
+    # Memory Optimization: Limit internal resolution to max 1800px width
+    # This prevents OOM on Railway 512MB limit while maintaining Ultra HD quality
+    MAX_WIDTH = 1800
     scale = 1.0
     if fw > MAX_WIDTH:
         scale = MAX_WIDTH / fw

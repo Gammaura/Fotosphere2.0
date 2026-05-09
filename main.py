@@ -167,9 +167,9 @@ def make_gif(photos: list, filter_name: str = "Natural") -> bytes:
     frames = []
     for b in photos:
         img = Image.open(io.BytesIO(b)).convert("RGB")
-        img = apply_filter(img, filter_name)
-        # Resize for GIF
+        # Resize for GIF BEFORE applying filter to save massive amounts of memory and CPU
         img.thumbnail((480, 480), Image.LANCZOS)
+        img = apply_filter(img, filter_name)
         frames.append(img)
     if not frames:
         return b""
@@ -399,6 +399,7 @@ async def api_finalize_strip(
     slots = get_frame_slots(frame_path)
     result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
 
+    import gc
     if sticker_overlay:
         try:
             overlay_bytes = await sticker_overlay.read()
@@ -407,10 +408,18 @@ async def api_finalize_strip(
             result = result.convert("RGBA")
             result = Image.alpha_composite(result, overlay_img)
             result = result.convert("RGB")
+            # Free memory immediately
+            del overlay_img
+            gc.collect()
         except Exception as e:
             print(f"Failed to apply sticker overlay: {e}")
 
     strip_bytes = pil_to_bytes(result)
+    
+    # Free result image from memory
+    del result
+    del photos_pil
+    gc.collect()
 
     # Generate GIF
     gif_bytes = make_gif(data["photos"], filter_name)
