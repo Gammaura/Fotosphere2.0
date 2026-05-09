@@ -505,19 +505,28 @@ async def api_finalize_strip(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/download-proxy")
-async def download_proxy(url: str, filename: str, inline: bool = False):
-    import requests
+async def download_proxy(request: Request, url: str, filename: str, inline: bool = False):
+    import httpx
     try:
-        r = requests.get(url, stream=True)
-        r.raise_for_status()
-        disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
-        return StreamingResponse(
-            r.iter_content(chunk_size=1024*10),
-            headers={
+        headers = {}
+        if "range" in request.headers:
+            headers["Range"] = request.headers["range"]
+            
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, headers=headers)
+            
+            disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
+            resp_headers = {
                 "Content-Disposition": disposition,
-                "Content-Type": r.headers.get("Content-Type", "application/octet-stream")
+                "Content-Type": r.headers.get("Content-Type", "application/octet-stream"),
+                "Accept-Ranges": "bytes"
             }
-        )
+            if "Content-Range" in r.headers:
+                resp_headers["Content-Range"] = r.headers["Content-Range"]
+            if "Content-Length" in r.headers:
+                resp_headers["Content-Length"] = r.headers["Content-Length"]
+                
+            return Response(content=r.content, status_code=r.status_code, headers=resp_headers)
     except Exception as e:
         raise HTTPException(500, f"Download failed: {str(e)}")
 
@@ -570,8 +579,10 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            v_url = live_clip_urls[i]
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0)"><video src="{v_url}" crossorigin="anonymous" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
+            # Use the proxy inline to completely bypass CORS issues on Canvas Tainting and iOS Safari
+            v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
+            # Removed crossorigin="anonymous" since it's now same-origin via the proxy
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0)"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:transparent;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])
