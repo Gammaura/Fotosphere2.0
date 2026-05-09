@@ -506,27 +506,26 @@ async def api_finalize_strip(
 
 @app.get("/api/download-proxy")
 async def download_proxy(request: Request, url: str, filename: str, inline: bool = False):
-    import httpx
+    import requests
     try:
         headers = {}
         if "range" in request.headers:
             headers["Range"] = request.headers["range"]
             
-        async with httpx.AsyncClient() as client:
-            r = await client.get(url, headers=headers)
+        r = requests.get(url, headers=headers)
+        
+        disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
+        resp_headers = {
+            "Content-Disposition": disposition,
+            "Content-Type": r.headers.get("Content-Type", "application/octet-stream"),
+            "Accept-Ranges": "bytes"
+        }
+        if "Content-Range" in r.headers:
+            resp_headers["Content-Range"] = r.headers["Content-Range"]
+        if "Content-Length" in r.headers:
+            resp_headers["Content-Length"] = r.headers["Content-Length"]
             
-            disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
-            resp_headers = {
-                "Content-Disposition": disposition,
-                "Content-Type": r.headers.get("Content-Type", "application/octet-stream"),
-                "Accept-Ranges": "bytes"
-            }
-            if "Content-Range" in r.headers:
-                resp_headers["Content-Range"] = r.headers["Content-Range"]
-            if "Content-Length" in r.headers:
-                resp_headers["Content-Length"] = r.headers["Content-Length"]
-                
-            return Response(content=r.content, status_code=r.status_code, headers=resp_headers)
+        return Response(content=r.content, status_code=r.status_code, headers=resp_headers)
     except Exception as e:
         raise HTTPException(500, f"Download failed: {str(e)}")
 
