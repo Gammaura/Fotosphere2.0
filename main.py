@@ -346,6 +346,19 @@ async def api_upload_photos(
 
     try:
         SESSION_STORE[session_id]["photos"] = saved
+        
+        # Pre-generate a 300px base thumbnail for the filter preview to prevent OOM
+        frame_path = os.path.join("static/frames", frame_id)
+        if os.path.exists(frame_path):
+            from utils import get_frame_slots, composite_photos_on_frame
+            photos_pil = [Image.open(io.BytesIO(b)) for b in saved]
+            slots = get_frame_slots(frame_path)
+            thumb_img = composite_photos_on_frame(frame_path, photos_pil, slots, "Natural", 300)
+            buf = io.BytesIO()
+            thumb_img.save(buf, format="JPEG", quality=80)
+            SESSION_STORE[session_id]["thumb_base"] = buf.getvalue()
+            import gc; del thumb_img; del photos_pil; gc.collect()
+            
         update_session(session_id, photo_urls=urls, frame_choice=frame_id, mirror=mirror)
         return {"success": True, "uploaded": len(saved)}
     except Exception as e:
@@ -358,6 +371,14 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
         raise HTTPException(status_code=404, detail="Not found")
 
     data = SESSION_STORE[session_id]
+    if thumb and "thumb_base" in data:
+        img = Image.open(io.BytesIO(data["thumb_base"])).convert("RGB")
+        if filter_name != "Natural":
+            img = apply_filter(img, filter_name)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=60)
+        return Response(content=buf.getvalue(), media_type="image/jpeg")
+
     frame_id = data["frame_id"]
     frame_path = os.path.join("static/frames", frame_id)
 
@@ -367,17 +388,12 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
     photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
     slots = get_frame_slots(frame_path)
     
-    # If thumbnail is requested, limit max_width to 300 to save memory on concurrent requests
     # Main preview (thumb=0) is limited to 800px because it's just for the UI
-    max_w = 300 if thumb else 800
-    result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name, max_w)
+    result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name, 800)
 
     fmt = "JPEG"
-    # Compress aggressive for thumbnails
-    quality = 60 if thumb else 90
-    
     buf = io.BytesIO()
-    result.save(buf, format=fmt, quality=quality)
+    result.save(buf, format=fmt, quality=90)
     import gc; del result; del photos_pil; gc.collect()
     return Response(content=buf.getvalue(), media_type=f"image/{fmt.lower()}")
 
