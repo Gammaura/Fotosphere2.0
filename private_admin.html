@@ -255,8 +255,17 @@
                 alert(msg);
                 
                 if (d.wa_link) {
-                    // Open WhatsApp automatically
-                    window.open(d.wa_link, '_blank');
+                    // Try to open WhatsApp automatically
+                    let popup = window.open(d.wa_link, '_blank');
+                    if (!popup || popup.closed || typeof popup.closed == 'undefined') {
+                        // Popup blocked
+                        const p = document.createElement('div');
+                        p.innerHTML = `<div style="background:#e8f5e9;border:1px solid #4CAF50;padding:10px;margin:10px 0;border-radius:8px">
+                            <strong>Kirim ke WhatsApp Pelanggan:</strong><br>
+                            <a href="${d.wa_link}" target="_blank" class="btn btn-green" style="display:inline-block;margin-top:5px;text-decoration:none">Kirim via WA Web/App</a>
+                        </div>`;
+                        document.getElementById('frame-upload-form').appendChild(p);
+                    }
                 }
             } else {
                 alert("Upload gagal");

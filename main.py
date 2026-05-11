@@ -283,7 +283,8 @@ def api_get_config():
         "frames": [{
             "id": f["id"], "name": f["name"], "photos": f["photos"],
             "layout": f["layout"], "width": f["width"], "height": f["height"],
-            "slots": f["slots"], "thumb": f"/frames/{f['file']}"
+            "slots": f["slots"], "thumb": f"/frames/{f['file']}",
+            "is_private": f.get("is_private", False)
         } for f in frames],
         "filters": [{"id": k, "name": k} for k in FILTERS.keys()]
     }
@@ -888,8 +889,8 @@ async def admin_upload_frame(
     # Upload to Supabase Storage + DB
     try:
         from db import storage_upload_frame, db_upsert_frame
-        storage_upload_frame(fname, content)
-        db_upsert_frame(fname, display, len(slots))
+        storage_url = storage_upload_frame(fname, content)
+        db_upsert_frame(fname, display, slots, storage_url)
     except Exception as e:
         print(f"Supabase upload warning: {e}")
 
