@@ -213,17 +213,21 @@ function applyEmojiOv(){
     const ir=img.getBoundingClientRect(),cr=container.getBoundingClientRect();
     const offL=ir.left-cr.left,offT=ir.top-cr.top,iW=ir.width,iH=ir.height;
     if(iW<10||iH<10)return;
-    // Grid-based even distribution: split into cells, place one emoji per cell with jitter
-    const cols=5,rows=5,n=cols*rows;
-    const cellW=iW/cols,cellH=iH/rows;
-    for(let r=0;r<rows;r++){for(let c=0;c<cols;c++){
+    // Sparsely scatter emojis ONLY on the edges (border) of the frame
+    const numE = 8 + Math.floor(Math.random() * 4); // 8 to 11 emojis
+    for(let i=0; i<numE; i++){
         const el=document.createElement('span');el.className='emojiOverlayItem';el.textContent=e.c;
-        const jx=(Math.random()*0.6+0.2)*cellW, jy=(Math.random()*0.6+0.2)*cellH;
-        const px=offL+c*cellW+jx, py=offT+r*cellH+jy;
-        const sz=0.5+Math.random()*0.5, rot=Math.random()*60-30;
-        el.style.cssText=`left:${px}px;top:${py}px;font-size:${sz}rem;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${.5+Math.random()*.4}`;
+        let px, py;
+        const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+        if (edge === 0) { px = offL + Math.random()*iW; py = offT + Math.random()*(iH*0.12); } 
+        else if (edge === 1) { px = offL + iW - Math.random()*(iW*0.15); py = offT + Math.random()*iH; } 
+        else if (edge === 2) { px = offL + Math.random()*iW; py = offT + iH - Math.random()*(iH*0.12); } 
+        else { px = offL + Math.random()*(iW*0.15); py = offT + Math.random()*iH; }
+
+        const sz=0.6+Math.random()*0.4, rot=Math.random()*60-30;
+        el.style.cssText=`left:${px}px;top:${py}px;font-size:${sz}rem;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${.7+Math.random()*.3};position:absolute`;
         ov.appendChild(el);
-    }}
+    }
 }
 
 // Filter
@@ -254,7 +258,7 @@ async function finalizeStrip(){
     loader('MENCETAK STRIP...');const fd=new FormData();fd.append('filter_name',S.filter);
     // Sticker overlay from emoji
     const ov=$('emoji-overlay');const ems=ov.querySelectorAll('.emojiOverlayItem');
-    if(ems.length>0){const img=$('emoji-prev-img')||$('prev-img');if(img&&img.naturalWidth){const cvs=document.createElement('canvas');cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;const ctx=cvs.getContext('2d');const ir=img.getBoundingClientRect();const rr=img.naturalWidth/img.naturalHeight,dr=ir.width/ir.height;let dw,dh,ox,oy;if(dr>rr){dh=ir.height;dw=dh*rr;ox=(ir.width-dw)/2;oy=0}else{dw=ir.width;dh=dw/rr;ox=0;oy=(ir.height-dh)/2}const sc=img.naturalWidth/dw;ems.forEach(e=>{const ch=e.textContent,er=e.getBoundingClientRect(),pr=ov.getBoundingClientRect(),cx=er.left+er.width/2-pr.left,cy=er.top+er.height/2-pr.top,nx=(cx-ox)*sc,ny=(cy-oy)*sc,ns=32*sc;ctx.font=`${ns}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ch,nx,ny)});const blob=await new Promise(r=>cvs.toBlob(r,'image/png'));fd.append('sticker_overlay',blob,'stickers.png')}}
+    if(ems.length>0){const img=$('emoji-prev-img')||$('prev-img');if(img&&img.naturalWidth){const cvs=document.createElement('canvas');cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;const ctx=cvs.getContext('2d');const ir=img.getBoundingClientRect();const rr=img.naturalWidth/img.naturalHeight,dr=ir.width/ir.height;let dw,dh,ox,oy;if(dr>rr){dh=ir.height;dw=dh*rr;ox=(ir.width-dw)/2;oy=0}else{dw=ir.width;dh=dw/rr;ox=0;oy=(ir.height-dh)/2}const sc=img.naturalWidth/dw;ems.forEach(e=>{const ch=e.textContent,er=e.getBoundingClientRect(),pr=ov.getBoundingClientRect(),cx=er.left+er.width/2-pr.left,cy=er.top+er.height/2-pr.top,nx=(cx-ox)*sc,ny=(cy-oy)*sc;const fs=parseFloat(window.getComputedStyle(e).fontSize);const ns=fs*sc;let rot=0;const trans=e.style.transform;if(trans.includes('rotate(')){rot=parseFloat(trans.split('rotate(')[1].split('deg)')[0])*Math.PI/180;}ctx.save();ctx.font=`${ns}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.translate(nx,ny);ctx.rotate(rot);ctx.fillText(ch,0,0);ctx.restore()});const blob=await new Promise(r=>cvs.toBlob(r,'image/png'));fd.append('sticker_overlay',blob,'stickers.png')}}
     // Upload live clips
     S.liveClips.forEach((clip,i)=>{if(clip)fd.append('live_clips',clip,`live_${i}.webm`)});
     try{const r=await fetch(`/api/session/${S.sid}/finalize`,{method:'POST',body:fd});if(!r.ok){const et=await r.text();throw new Error(et||'Finalize failed')}const d=await r.json();S.stripUrl=d.strip_url||'';S.gifUrl=d.gif_url||'';if(d.qr_b64)$('done-qr').innerHTML=`<img src="data:image/png;base64,${d.qr_b64}">`;noloader();stopTimer();show('done');doneToggle('photo')}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
