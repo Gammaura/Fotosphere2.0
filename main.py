@@ -808,6 +808,7 @@ def admin_list_frames():
 
 @app.post("/api/admin/frames/upload")
 async def admin_upload_frame(
+    request: Request,
     frame: UploadFile = File(...),
     name: str = Form(None),
     is_private: str = Form("false"),
@@ -865,16 +866,8 @@ async def admin_upload_frame(
         db_upsert_ticket(ticket_code, 1, fname)
         
         if whatsapp:
-            # Get actual base url
-            import socket
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("8.8.8.8", 80))
-                local_ip = s.getsockname()[0]
-                s.close()
-                base = f"http://{local_ip}:8000/" # fallback for local
-            except:
-                base = "https://fotosphere.up.railway.app/" # production fallback
+            # Get actual base url from request
+            base = str(request.base_url)
             
             # Format phone number for wa.me
             wa_num = whatsapp.strip()
