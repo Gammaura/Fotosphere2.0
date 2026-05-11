@@ -116,8 +116,12 @@
                 </div>
             </div>
             <div class="card">
-                <div class="card-title">Frame Tersedia</div>
-                <div class="frame-grid" id="frame-list"></div>
+                <div class="card-title">Frame Umum (Tampil di Publik)</div>
+                <div class="frame-grid" id="frame-list-public"></div>
+            </div>
+            <div class="card">
+                <div class="card-title" style="color: #e65100;">Frame Private / Custom (Hanya via Tiket Khusus)</div>
+                <div class="frame-grid" id="frame-list-private"></div>
             </div>
         </div>
 
@@ -275,15 +279,33 @@
         async function loadFrames() {
             const r = await fetch('/api/admin/frames');
             const frames = await r.json();
-            const g = document.getElementById('frame-list');
-            if (!frames.length) { g.innerHTML = '<div class="empty">Belum ada frame. Upload PNG di atas.</div>'; return; }
-            g.innerHTML = frames.map(f => `
-                <div class="frame-item">
-                    <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                    <img src="/frames/${f.file}" alt="${f.name}">
-                    <div class="frame-item-info">${f.name} · ${f.photos} foto</div>
-                </div>
-            `).join('');
+            const gPub = document.getElementById('frame-list-public');
+            const gPriv = document.getElementById('frame-list-private');
+            
+            const pubFrames = frames.filter(f => !f.is_private);
+            const privFrames = frames.filter(f => f.is_private);
+            
+            if (!pubFrames.length) { gPub.innerHTML = '<div class="empty">Belum ada frame umum.</div>'; }
+            else {
+                gPub.innerHTML = pubFrames.map(f => `
+                    <div class="frame-item">
+                        <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
+                        <img src="/frames/${f.file}" alt="${f.name}">
+                        <div class="frame-item-info">${f.name} · ${f.photos} foto</div>
+                    </div>
+                `).join('');
+            }
+            
+            if (!privFrames.length) { gPriv.innerHTML = '<div class="empty">Belum ada frame private.</div>'; }
+            else {
+                gPriv.innerHTML = privFrames.map(f => `
+                    <div class="frame-item" style="border: 2px solid #ffcc80;">
+                        <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
+                        <img src="/frames/${f.file}" alt="${f.name}">
+                        <div class="frame-item-info" style="color:#e65100">${f.name} · ${f.photos} foto<br><span style="font-size:0.6rem">🔒 Private</span></div>
+                    </div>
+                `).join('');
+            }
         }
 
         document.getElementById('frame-private').addEventListener('change', function() {
