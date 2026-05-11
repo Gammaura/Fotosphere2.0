@@ -338,6 +338,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
             # get_frame_slots handles loading from JSON or auto-detecting and saving to JSON
             slots = get_frame_slots(fpath)
             
+            is_private = False
             # Load display name if present in JSON
             if os.path.exists(json_path):
                 try:
@@ -345,6 +346,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
                         jdata = _json.load(jf)
                     if "display_name" in jdata:
                         name = jdata["display_name"]
+                    is_private = jdata.get("is_private", False)
                 except:
                     pass
             
@@ -366,6 +368,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
                 "width": fw,
                 "height": fh,
                 "slots": slots,
+                "is_private": is_private,
             })
         except Exception as e:
             print(f"Error scanning frame {fname}: {e}")

@@ -162,6 +162,16 @@ def make_qr_b64(url: str) -> str:
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode()
 
+@app.get("/api/qr/{code}")
+def serve_qr_image(code: str):
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(code)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#1a1a2e", back_color="#ffffff")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Response(content=buf.getvalue(), media_type="image/png")
+
 def make_gif(photos: list, filter_name: str = "Natural") -> bytes:
     """Create animated GIF from session photos."""
     frames = []
@@ -312,6 +322,30 @@ async def api_claim_voucher(request: Request):
                 if v.get("custom_frame"):
                     result["custom_frame"] = v["custom_frame"]
                 return result
+                
+        # Fallback: Check if they typed a ticket code in the voucher menu
+        if code in TICKET_CODES:
+            t = TICKET_CODES[code]
+            if t.get("uses_left", 0) > 0:
+                session_id = str(uuid.uuid4())
+                order_id = f"TICKET-{code}"
+                try:
+                    create_session(session_id, order_id)
+                except Exception as db_err:
+                    return {"valid": False, "error": f"Database error: {str(db_err)}"}
+                t["uses_left"] -= 1
+                from db import db_update_ticket_uses
+                db_update_ticket_uses(code, t["uses_left"])
+                SESSION_STORE[session_id] = {
+                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                    "created_at": datetime.utcnow()
+                }
+                db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
+                result = {"valid": True, "session_id": session_id}
+                if t.get("custom_frame"):
+                    result["custom_frame"] = t["custom_frame"]
+                return result
+                
         return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
     except Exception as e:
         print(f"Voucher claim error: {e}")
@@ -774,7 +808,9 @@ def admin_list_frames():
 @app.post("/api/admin/frames/upload")
 async def admin_upload_frame(
     frame: UploadFile = File(...),
-    name: str = Form(None)
+    name: str = Form(None),
+    is_private: str = Form("false"),
+    whatsapp: str = Form(None)
 ):
     if not frame.filename.lower().endswith(".png"):
         raise HTTPException(400, "Only PNG files allowed")
@@ -796,31 +832,76 @@ async def admin_upload_frame(
     # Detect slots
     slots = get_frame_slots(path)
     display = name.strip() if name else fname.replace('.png','').replace('_',' ').title()
+    is_private_bool = is_private.lower() == "true"
+
+    # Update JSON sidecar
+    json_path = os.path.splitext(path)[0] + ".json"
+    data = {}
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+        except:
+            pass
+    
+    data["display_name"] = display
+    data["is_private"] = is_private_bool
+    
+    with open(json_path, 'w') as f:
+        json.dump(data, f, indent=2)
+
+    # Generate ticket if private
+    ticket_code = None
+    wa_link = None
+    if is_private_bool:
+        import string, random
+        chars = string.ascii_uppercase + string.digits
+        ticket_code = ''.join(random.choice(chars) for _ in range(6))
+        
+        # Save ticket
+        TICKET_CODES[ticket_code] = {"uses_left": 1, "created_at": datetime.utcnow().isoformat(), "custom_frame": fname}
+        from db import db_upsert_ticket
+        db_upsert_ticket(ticket_code, 1, fname)
+        
+        if whatsapp:
+            # Get actual base url
+            import socket
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+                s.close()
+                base = f"http://{local_ip}:8000/" # fallback for local
+            except:
+                base = "https://fotosphere.up.railway.app/" # production fallback
+            
+            # Format phone number for wa.me
+            wa_num = whatsapp.strip()
+            if wa_num.startswith('0'):
+                wa_num = '62' + wa_num[1:]
+            
+            # WhatsApp text with ticket code
+            qr_url = f"{base}api/qr/{ticket_code}"
+            text = f"Halo! Ini akses eksklusif Photobooth kamu.%0A%0ABuka link di bawah ini untuk melihat *Barcode Tiket* yang bisa di-scan ke kamera photobooth:%0A{qr_url}%0A%0A(Atau kamu juga bisa mengetik kodenya manual di menu Voucher: *{ticket_code}*)%0A%0ASelamat berfoto! ✨"
+            wa_link = f"https://wa.me/{wa_num}?text={text}"
 
     # Upload to Supabase Storage + DB
     try:
-        storage_url = storage_upload_frame(fname, content)
-        db_upsert_frame(fname, display, slots, storage_url)
+        from db import storage_upload_frame, db_upsert_frame
+        storage_upload_frame(fname, content)
+        db_upsert_frame(fname, display, len(slots))
     except Exception as e:
-        print(f"Supabase frame upload error: {e}")
+        print(f"Supabase upload warning: {e}")
 
-    # Write JSON sidecar locally
-    if name or slots:
-        json_path = os.path.splitext(path)[0] + ".json"
-        sidecar = {}
-        if os.path.exists(json_path):
-            try:
-                with open(json_path, 'r') as jf:
-                    sidecar = json.load(jf)
-            except: pass
-        if name:
-            sidecar["display_name"] = name.strip()
-        if slots:
-            sidecar["slots"] = slots
-        with open(json_path, 'w') as jf:
-            json.dump(sidecar, jf, indent=2)
+    return {
+        "success": True, 
+        "name": display, 
+        "slots_detected": len(slots),
+        "is_private": is_private_bool,
+        "ticket_code": ticket_code,
+        "wa_link": wa_link
+    }
 
-    return {"success": True, "file": fname, "name": display, "slots_detected": len(slots)}
 
 @app.delete("/api/admin/frames/{filename}")
 def admin_delete_frame(filename: str):

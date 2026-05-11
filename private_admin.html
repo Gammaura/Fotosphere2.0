@@ -76,6 +76,13 @@
                         <label>File PNG (area transparan = slot foto)</label>
                         <input type="file" id="frame-file" accept=".png">
                     </div>
+                    <div style="margin-left: 10px;">
+                        <label><input type="checkbox" id="frame-private" style="margin-right:5px">Jadikan Frame Private / Custom</label>
+                    </div>
+                    <div id="wa-input-container" style="display:none; margin-left: 10px;">
+                        <label>No. WhatsApp Pelanggan</label>
+                        <input type="text" id="frame-whatsapp" placeholder="Contoh: 08123456789" style="width:180px">
+                    </div>
                     <button class="btn" onclick="uploadFrame()">📤 Upload</button>
                 </div>
             </div>
@@ -216,20 +223,48 @@
             `).join('');
         }
 
+        document.getElementById('frame-private').addEventListener('change', function() {
+            document.getElementById('wa-input-container').style.display = this.checked ? 'block' : 'none';
+        });
+
         async function uploadFrame() {
             const fileInput = document.getElementById('frame-file');
             const nameInput = document.getElementById('frame-name');
+            const isPrivate = document.getElementById('frame-private').checked;
+            const waInput = document.getElementById('frame-whatsapp');
+            
             if (!fileInput.files[0]) return alert('Pilih file PNG');
             
             const customName = nameInput.value.trim();
             const fd = new FormData();
             fd.append('frame', fileInput.files[0]);
             if (customName) fd.append('name', customName);
+            fd.append('is_private', isPrivate);
+            if (isPrivate && waInput.value.trim()) {
+                fd.append('whatsapp', waInput.value.trim());
+            }
             
             const r = await fetch('/api/admin/frames/upload', { method: 'POST', body: fd });
             const d = await r.json();
-            alert(`Frame "${d.name}" berhasil di-upload!\n${d.slots_detected} slot foto terdeteksi.`);
+            
+            if (d.success) {
+                let msg = `Frame "${d.name}" berhasil di-upload!\n${d.slots_detected} slot foto terdeteksi.`;
+                if (d.is_private) {
+                    msg += `\n\nTiket Eksklusif: ${d.ticket_code}`;
+                }
+                alert(msg);
+                
+                if (d.wa_link) {
+                    // Open WhatsApp automatically
+                    window.open(d.wa_link, '_blank');
+                }
+            } else {
+                alert("Upload gagal");
+            }
+            
             fileInput.value = ''; nameInput.value = '';
+            waInput.value = ''; document.getElementById('frame-private').checked = false;
+            document.getElementById('wa-input-container').style.display = 'none';
             loadFrames();
         }
 

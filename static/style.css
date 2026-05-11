@@ -278,3 +278,132 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .loaderMsg{color:#fff;font-weight:700;letter-spacing:3px;font-size:.7rem}
 .emptyFrameMsg{text-align:center;padding:2rem;color:#aaa;font-size:.75rem;font-weight:600}
 
+/* ========================================= */
+/*       RESPONSIVE MOBILE STYLES            */
+/* ========================================= */
+@media screen and (max-width: 900px) {
+  html, body {
+    min-width: 100vw;
+  }
+  
+  /* Make screens natively scrollable on mobile */
+  .screen {
+    position: fixed;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 40px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .pageFrame, .splitWrap {
+    position: relative;
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+  }
+  
+  /* Home & General */
+  .vCenter {
+    padding: 3rem 1.5rem;
+    height: auto;
+    min-height: 100vh;
+    justify-content: center;
+  }
+  .home-brand { font-size: 2rem; }
+  .btn-pink { width: 100%; margin-top: 2rem; font-size: 0.9rem; padding: 1rem; }
+  .timerPill { top: 15px; right: 15px; }
+  .backBtn { top: 15px; left: 15px; }
+  
+  /* Payment / Cards */
+  .pmCards {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    width: 100%;
+  }
+  .pmCard {
+    width: 90%;
+    max-width: 360px;
+    max-height: none;
+    padding: 12px 12px 0 12px;
+  }
+  .pmIconArea { max-height: 220px; }
+  .pmPill { font-size: 1rem; padding: 10px 30px; }
+  
+  /* Form Inputs */
+  .vcCard { width: 90%; padding: 1.5rem; }
+  .vkb { width: 95%; padding: 1rem; }
+  .vkb-key { max-width: none; font-size: 0.8rem; height: 40px; }
+  
+  /* Split Layouts (Frame, Shoot, Emoji, Filter) */
+  .splitInner {
+    flex-direction: column;
+    padding: 80px 20px 30px 20px;
+    gap: 20px;
+    height: auto;
+    align-items: stretch;
+  }
+  .splitL, .splitR {
+    width: 100%;
+    height: auto;
+    min-height: 400px;
+    flex: none;
+  }
+  .splitR {
+    min-height: 550px;
+  }
+  
+  /* Grids */
+  .frameGrid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .emojiGrid { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .filterGrid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  
+  /* Camera Controls */
+  .camCtrls {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cg {
+    flex: 1 1 45%;
+    padding: 8px;
+  }
+  .cg .cgB {
+    padding: 5px 12px;
+  }
+  
+  /* Done Screen */
+  .doneSplit {
+    flex-direction: column;
+    padding: 80px 20px 40px 20px;
+    gap: 2rem;
+    height: auto;
+  }
+  .doneL, .doneRWrap {
+    width: 100%;
+    height: auto;
+  }
+  .doneL {
+    min-height: 550px;
+  }
+  .doneR {
+    padding: 1.5rem;
+  }
+  .doneQR {
+    width: 200px;
+    height: 200px;
+  }
+  .doneBot {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .doneHash { width: 100%; text-align: center; }
+  .btn-end { width: 100%; padding: 1rem; }
+  
+  /* Modals */
+  .successCard {
+    width: 90%;
+    padding: 2rem;
+  }
+}

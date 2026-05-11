@@ -14,7 +14,7 @@ function vkDel(){$('voucher-input').value=$('voucher-input').value.slice(0,-1)}
 
 // Init
 async function init(){try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;buildCats()}catch(e){console.error(e)}}
-function buildCats(){S.categories={};S.frames.forEach(f=>{let c=f.name||f.id;if(!S.categories[c])S.categories[c]=[];S.categories[c].push(f)})}
+function buildCats(){S.categories={};S.frames.forEach(f=>{if(f.is_private)return;let c=f.name||f.id;if(!S.categories[c])S.categories[c]=[];S.categories[c].push(f)})}
 init();
 
 // Timer
@@ -58,7 +58,7 @@ function renderFramePanel(){
     tabsH+='</div></div>';
 
     // Filtered frames (vertical scroll)
-    const frames=_activeCat==='all'?S.frames:(S.categories[_activeCat]||[]);
+    const frames=_activeCat==='all'?S.frames.filter(f=>!f.is_private):(S.categories[_activeCat]||[]);
     let gridH='<div class="frameGrid">';
     if(!frames.length){gridH+='<div class="emptyFrameMsg">Belum ada frame.</div>'}
     else frames.forEach(f=>{const sel=S.frame&&S.frame.id===f.id;gridH+=`<div class="fc${sel?' sel':''}" onclick="pickFrame('${f.id}')"><div class="fcThumb"><img src="${f.thumb}"></div><div class="fcName">${f.name}</div><div class="fcBadge">${f.photos} Foto</div></div>`});
