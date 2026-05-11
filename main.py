@@ -652,7 +652,9 @@ def download_page(session_id: str, request: Request):
                             btn.style.display='flex';loader.style.display='none';
                         }};
                         recorder.start(100);draw();
-                        setTimeout(function(){{recorder.stop();}},3500);
+                        // Freeze videos at the end like iPhone Live Photo
+                        setTimeout(function(){{ videos.forEach(function(v){{ v.pause(); }}); }}, 2500);
+                        setTimeout(function(){{recorder.stop();}},4000);
                     }} catch(err) {{
                         console.error(err);alert('Gagal: '+err.message);
                         btn.style.display='flex';loader.style.display='none';

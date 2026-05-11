@@ -3,7 +3,7 @@
 (function(){const h=(window.innerHeight-80)+'px',w=(window.innerWidth-80)+'px';document.documentElement.style.setProperty('--init-h',h);document.documentElement.style.setProperty('--init-w',w)})();
 function showModal(t,s,i='✨'){document.getElementById('modal-title').innerText=t;document.getElementById('modal-sub').innerText=s;document.getElementById('modal-icon').innerText=i;document.getElementById('overlay-modal').style.display='flex'}
 function hideModal(){document.getElementById('overlay-modal').style.display='none'}
-const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[]};
+const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[]};
 const $=id=>document.getElementById(id);
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$('screen-'+id).classList.add('active')};
 function loader(m){$('loader-msg').textContent=m||'MEMPROSES...';$('loader').style.display='flex'}
@@ -23,7 +23,7 @@ function startTimer(){_sL=600;updT();if(_sT)clearInterval(_sT);_sT=setInterval((
 function stopTimer(){if(_sT){clearInterval(_sT);_sT=null}}
 function updT(){const t=`${String(Math.floor(_sL/60)).padStart(2,'0')}.${String(_sL%60).padStart(2,'0')}`;['frame-timer','shoot-timer','emoji-timer','filter-timer'].forEach(id=>{const e=$(id);if(e)e.textContent=t})}
 
-function goHome(){stopCam();stopTimer();clearPay();stopTicketScan();S.sid=null;S.oid=null;S.frame=null;S.filter='Natural';S.emoji='Original';S.photos=[];S.slot=0;S.liveClips=[];const o=$('emoji-overlay');if(o)o.innerHTML='';show('home')}
+function goHome(){stopCam();stopTimer();clearPay();stopTicketScan();S.sid=null;S.oid=null;S.frame=null;S.filter='Natural';S.emoji='Original';S.photos=[];S.slot=0;S.liveClips=[];(S.photoUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.photoUrls=[];(S.liveUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.liveUrls=[];const o=$('emoji-overlay');if(o)o.innerHTML='';show('home')}
 function goPaymentMethod(){stopCam();clearPay();show('paymethod')}
 
 // Ticket scan
@@ -77,7 +77,7 @@ function updateFPrev(){
 // Shoot
 function backToFrame(){stopCam();show('frame')}
 async function goToShoot(){
-    if(!S.frame)return;S.photos=new Array(S.max).fill(null);S.slot=0;S.liveClips=new Array(S.max).fill(null);
+    if(!S.frame)return;S.photos=new Array(S.max).fill(null);S.slot=0;S.liveClips=new Array(S.max).fill(null);(S.photoUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.photoUrls=new Array(S.max).fill(null);(S.liveUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.liveUrls=new Array(S.max).fill(null);
     loader('MENGAKSES KAMERA...');
     try{S.stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'},audio:false});
     const v=$('cam-vid');v.srcObject=S.stream;v.style.transform=S.mirror?'scaleX(-1)':'none';await v.play();
@@ -93,7 +93,7 @@ function setLivePhoto(on){S.livePhoto=on;$('lp-on').classList.toggle('on',on);$(
 function updateShootPrev(){
     const b=$('shoot-prev-body'),f=S.frame;if(!f)return;
     let h=`<div class="framePrev" style="width:100%;aspect-ratio:${f.width}/${f.height};max-height:100%"><img class="frameImg" src="${f.thumb}">`;
-    f.slots.forEach((s,i)=>{const l=(s.x/f.width*100).toFixed(2),t=(s.y/f.height*100).toFixed(2),w=(s.w/f.width*100).toFixed(2),hh=(s.h/f.height*100).toFixed(2);const act=i===S.slot&&!S.photos[i];let c='';if(S.photos[i])c=`<img src="${URL.createObjectURL(S.photos[i])}" onclick="confirmRetake(${i})"><button class="retakeBtn" onclick="confirmRetake(${i})">Retake</button>`;else if(act)c=`<div style="width:100%;height:100%;background:rgba(139,26,26,.08);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--accent)">${i+1}</span></div>`;else c=`<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span class="slotNumber">${i+1}</span></div>`;h+=`<div class="slotWrap${act?' slotActive':''}" style="left:${l}%;top:${t}%;width:${w}%;height:${hh}%">${c}</div>`});
+    f.slots.forEach((s,i)=>{const l=(s.x/f.width*100).toFixed(2),t=(s.y/f.height*100).toFixed(2),w=(s.w/f.width*100).toFixed(2),hh=(s.h/f.height*100).toFixed(2);const act=i===S.slot&&!S.photos[i];let c='';if(S.photos[i])c=`<img src="${S.photoUrls[i]}" onclick="confirmRetake(${i})"><button class="retakeBtn" onclick="confirmRetake(${i})">Retake</button>`;else if(act)c=`<div style="width:100%;height:100%;background:rgba(139,26,26,.08);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--accent)">${i+1}</span></div>`;else c=`<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span class="slotNumber">${i+1}</span></div>`;h+=`<div class="slotWrap${act?' slotActive':''}" style="left:${l}%;top:${t}%;width:${w}%;height:${hh}%">${c}</div>`});
     h+='</div>';b.innerHTML=h;
     const filled=S.photos.filter(p=>p!==null).length;$('shoot-progress').textContent=`${filled}/${S.max}`;$('btn-to-emoji').style.display=filled>=S.max?'flex':'none';
 }
@@ -173,11 +173,18 @@ async function capturePhoto(){
     // Save live clip for this slot (wait a moment for last frames)
     setTimeout(async()=>{
         const liveBlob=await saveLiveClip();
-        if(liveBlob)S.liveClips[capturedSlot]=liveBlob;
+        if(liveBlob){
+            S.liveClips[capturedSlot]=liveBlob;
+            if(S.liveUrls[capturedSlot]) URL.revokeObjectURL(S.liveUrls[capturedSlot]);
+            S.liveUrls[capturedSlot] = URL.createObjectURL(liveBlob);
+        }
     },800);
 
     cvs.toBlob(blob=>{
-        S.photos[capturedSlot]=blob;updateShootPrev();
+        S.photos[capturedSlot]=blob;
+        if(S.photoUrls[capturedSlot]) URL.revokeObjectURL(S.photoUrls[capturedSlot]);
+        S.photoUrls[capturedSlot] = URL.createObjectURL(blob);
+        updateShootPrev();
         const filled=S.photos.filter(p=>p!==null).length;
         if(filled<S.max){for(let i=0;i<S.max;i++){if(S.photos[i]===null){S.slot=i;break}}updateShootPrev();setTimeout(()=>showTapOv(),800)}
     },'image/png');
@@ -279,10 +286,9 @@ function doneToggle(type){
             const l=(s.x/f.width*100).toFixed(2),t=(s.y/f.height*100).toFixed(2),w=(s.w/f.width*100).toFixed(2),hh=(s.h/f.height*100).toFixed(2);
             let c='';
             if(S.liveClips[i]){
-                const url=URL.createObjectURL(S.liveClips[i]);
-                c=`<video src="${url}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover"></video>`;
+                c=`<video src="${S.liveUrls[i]}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover"></video>`;
             }else if(S.photos[i]){
-                c=`<img src="${URL.createObjectURL(S.photos[i])}" style="width:100%;height:100%;object-fit:cover">`;
+                c=`<img src="${S.photoUrls[i]}" style="width:100%;height:100%;object-fit:cover">`;
             }
             h+=`<div class="slotWrap" style="left:${l}%;top:${t}%;width:${w}%;height:${hh}%">${c}</div>`;
         });
