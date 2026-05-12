@@ -1075,6 +1075,9 @@ def admin_delete_ticket(code: str):
     return {"success": True}
 
 # Serve static (LAST)
+import os
+os.makedirs("static/frames", exist_ok=True)
+os.makedirs("static/custom_frames", exist_ok=True)
 app.mount("/custom_frames", StaticFiles(directory="static/custom_frames"), name="custom_frames")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
