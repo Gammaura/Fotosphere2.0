@@ -257,7 +257,7 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .doneQR{width:280px;height:280px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .doneQR img{width:100%;height:100%;object-fit:contain}
 .doneSocial{display:flex;gap:1rem;margin-top:.5rem}
-.doneSocItem{display:flex;align-items:center;gap:8px;font-size:.7rem;font-weight:700}
+.doneSocItem{display:flex;align-items:center;gap:8px;font-size:.7rem;font-weight:700;text-align:left}
 .doneSocItem .sIcon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
 .socIcon{width:36px;height:36px;object-fit:contain;border-radius:8px;flex-shrink:0}
 .socIcon.tt{transform:scale(1.15)}
