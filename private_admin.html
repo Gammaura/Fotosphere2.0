@@ -324,7 +324,7 @@
             }
             const sel = document.getElementById(selectId);
             sel.innerHTML = '<option value="">— Bebas pilih —</option>' +
-                _allFrames.map(f => `<option value="${f.file}">${f.name} (${f.photos} foto)</option>`).join('');
+                _allFrames.map(f => `<option value="${f.file}">${f.name} (${f.photos} foto)${f.is_private ? ' [Custom]' : ''}</option>`).join('');
         }
 
         // ═══ FRAMES ═══
@@ -353,7 +353,7 @@
                 gPriv.innerHTML = privFrames.map(f => `
                     <div class="frame-item" style="border: 2px solid #ffcc80;">
                         <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                        <img src="/frames/${f.file}" alt="${f.name}">
+                        <img src="/custom_frames/${f.file}" alt="${f.name}">
                         <div class="frame-item-info" style="color:#e65100">${f.name} · ${f.photos} foto<br><span style="font-size:0.6rem">🔒 Private</span></div>
                     </div>
                 `).join('');

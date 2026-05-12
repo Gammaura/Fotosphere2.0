@@ -164,7 +164,7 @@ def make_qr_b64(url: str) -> str:
 
 @app.get("/api/qr/{code}")
 def serve_qr_image(code: str):
-    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr = qrcode.QRCode(version=2, box_size=15, border=2, error_correction=qrcode.constants.ERROR_CORRECT_H)
     qr.add_data(code)
     qr.make(fit=True)
     img = qr.make_image(fill_color="#1a1a2e", back_color="#ffffff")
@@ -279,14 +279,17 @@ async def api_payment_webhook(request: Request):
 @app.get("/api/config")
 def api_get_config():
     frames = get_frames()
+    public_frames = []
+    for f in frames:
+        if not f.get("is_private", False):
+            public_frames.append({
+                "id": f["id"], "name": f["name"], "photos": f["photos"],
+                "layout": f["layout"], "width": f["width"], "height": f["height"],
+                "slots": f["slots"], "thumb": f"/frames/{f['file']}",
+                "category": f.get("category", "Other")
+            })
     return {
-        "frames": [{
-            "id": f["id"], "name": f["name"], "photos": f["photos"],
-            "layout": f["layout"], "width": f["width"], "height": f["height"],
-            "slots": f["slots"], "thumb": f"/frames/{f['file']}",
-            "is_private": f.get("is_private", False),
-            "category": f.get("category", "Other")
-        } for f in frames],
+        "frames": public_frames,
         "filters": [{"id": k, "name": k} for k in FILTERS.keys()]
     }
 
@@ -322,7 +325,18 @@ async def api_claim_voucher(request: Request):
                 result = {"valid": True, "session_id": session_id}
                 # If voucher has custom frame linked
                 if v.get("custom_frame"):
-                    result["custom_frame"] = v["custom_frame"]
+                    custom_frame_id = v["custom_frame"]
+                    frames = get_frames()
+                    from utils import scan_frames_dir
+                    custom_frames_data = scan_frames_dir("static/custom_frames")
+                    all_frames = frames + custom_frames_data
+                    frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
+                    if frame_data:
+                        result["custom_frame_data"] = {
+                            "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
+                            "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
+                            "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
+                        }
                 return result
                 
         # Fallback: Check if they typed a ticket code in the voucher menu
@@ -345,7 +359,18 @@ async def api_claim_voucher(request: Request):
                 db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
                 result = {"valid": True, "session_id": session_id}
                 if t.get("custom_frame"):
-                    result["custom_frame"] = t["custom_frame"]
+                    custom_frame_id = t["custom_frame"]
+                    frames = get_frames()
+                    from utils import scan_frames_dir
+                    custom_frames_data = scan_frames_dir("static/custom_frames")
+                    all_frames = frames + custom_frames_data
+                    frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
+                    if frame_data:
+                        result["custom_frame_data"] = {
+                            "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
+                            "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
+                            "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
+                        }
                 return result
                 
         return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
@@ -416,7 +441,10 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
         return Response(content=buf.getvalue(), media_type="image/jpeg")
 
     frame_id = data["frame_id"]
+    # Check both frames and custom_frames directories
     frame_path = os.path.join("static/frames", frame_id)
+    if not os.path.exists(frame_path):
+        frame_path = os.path.join("static/custom_frames", frame_id)
 
     if not os.path.exists(frame_path):
         raise HTTPException(status_code=404, detail="Frame not found")
@@ -447,6 +475,8 @@ async def api_finalize_strip(
     data = SESSION_STORE[session_id]
     frame_id = data["frame_id"]
     frame_path = os.path.join("static/frames", frame_id)
+    if not os.path.exists(frame_path):
+        frame_path = os.path.join("static/custom_frames", frame_id)
 
     if not os.path.exists(frame_path):
         raise HTTPException(status_code=404, detail="Frame not found")
@@ -810,15 +840,33 @@ async def api_validate_ticket(request: Request):
             }
             db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
             result = {"valid": True, "session_id": session_id}
+            
+            # If ticket has a custom frame, return FULL frame data so frontend can use it directly
             if t.get("custom_frame"):
-                result["custom_frame"] = t["custom_frame"]
+                custom_frame_id = t["custom_frame"]
+                # Scan both public and custom frames to find it
+                frames = get_frames()
+                # Include custom frames scan here to find the frame data
+                from utils import scan_frames_dir
+                custom_frames_data = scan_frames_dir("static/custom_frames")
+                all_frames = frames + custom_frames_data
+                frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
+                if frame_data:
+                    result["custom_frame_data"] = {
+                        "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
+                        "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
+                        "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
+                    }
             return result
     return {"valid": False}
 
 # ─── ADMIN: FRAMES ───
 @app.get("/api/admin/frames")
 def admin_list_frames():
-    return get_frames()
+    from utils import scan_frames_dir
+    public_f = scan_frames_dir("static/frames")
+    custom_f = scan_frames_dir("static/custom_frames")
+    return public_f + custom_f
 
 @app.post("/api/admin/frames/upload")
 async def admin_upload_frame(
@@ -841,15 +889,18 @@ async def admin_upload_frame(
     else:
         fname = frame.filename
 
-    # Save locally
-    path = os.path.join("static/frames", fname)
+    is_private_bool = is_private.lower() == "true"
+    
+    # Save to the correct directory
+    target_dir = "static/custom_frames" if is_private_bool else "static/frames"
+    os.makedirs(target_dir, exist_ok=True)
+    path = os.path.join(target_dir, fname)
     with open(path, 'wb') as f:
         f.write(content)
 
     # Detect slots
     slots = get_frame_slots(path)
     display = name.strip() if name else fname.replace('.png','').replace('_',' ').title()
-    is_private_bool = is_private.lower() == "true"
 
     # Update JSON sidecar
     json_path = os.path.splitext(path)[0] + ".json"
@@ -915,13 +966,14 @@ async def admin_upload_frame(
 
 @app.delete("/api/admin/frames/{filename}")
 def admin_delete_frame(filename: str):
-    # Delete locally
-    path = os.path.join("static/frames", filename)
-    if os.path.exists(path):
-        os.remove(path)
-        json_path = os.path.splitext(path)[0] + ".json"
-        if os.path.exists(json_path):
-            os.remove(json_path)
+    # Try deleting from both directories
+    for t_dir in ["static/frames", "static/custom_frames"]:
+        path = os.path.join(t_dir, filename)
+        if os.path.exists(path):
+            os.remove(path)
+            json_path = os.path.splitext(path)[0] + ".json"
+            if os.path.exists(json_path):
+                os.remove(json_path)
     # Delete from Supabase
     try:
         db_delete_frame(filename)
@@ -1023,6 +1075,7 @@ def admin_delete_ticket(code: str):
     return {"success": True}
 
 # Serve static (LAST)
+app.mount("/custom_frames", StaticFiles(directory="static/custom_frames"), name="custom_frames")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
