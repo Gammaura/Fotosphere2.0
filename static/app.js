@@ -48,7 +48,37 @@ function goPaymentMethod(){stopCam();clearPay();show('paymethod')}
 
 // Ticket scan
 let _scanner=null,_scanP=false;
-async function goScanTicket(){show('ticket');_scanP=false;try{_scanner=new Html5Qrcode("ticket-reader");await _scanner.start({facingMode:"user"},{fps:20},async(txt)=>{if(_scanP)return;_scanP=true;try{const r=await fetch('/api/ticket/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:txt})});const d=await r.json();if(d.valid){S.sid=d.session_id;stopTicketScan();if(d.custom_frame_data){S.frame=d.custom_frame_data;if(S.frame){S.max=S.frame.photos;showSuccess('Scan Ticket Berhasil','Terima Kasih',{method:'Ticket',order:'TICKET-'+txt,total:'GRATIS'},()=>{startTimer();goToShoot()});return}}showSuccess('Scan Ticket Berhasil','Terima Kasih',{method:'Ticket',order:'TICKET-'+txt,total:'GRATIS'},()=>{startTimer();goToFrame()})}else{_scanP=false;showModal('Ticket Tidak Valid','Coba scan ulang','❌')}}catch(e){_scanP=false}},()=>{})}catch(e){console.error(e)}}
+async function goScanTicket(){
+    show('ticket');_scanP=false;
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        if(devices && devices.length) {
+            _scanner=new Html5Qrcode("ticket-reader");
+            await _scanner.start(devices[0].id, {fps:20}, async(txt)=>{
+                if(_scanP)return;_scanP=true;
+                try {
+                    const r=await fetch('/api/ticket/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:txt})});
+                    const d=await r.json();
+                    if(d.valid){
+                        S.sid=d.session_id; stopTicketScan();
+                        if(d.custom_frame_data){
+                            S.frame=d.custom_frame_data;
+                            if(S.frame){ S.max=S.frame.photos; showSuccess('Scan Ticket Berhasil','Terima Kasih',{method:'Ticket',order:'TICKET-'+txt,total:'GRATIS'},()=>{startTimer();goToShoot()}); return; }
+                        }
+                        showSuccess('Scan Ticket Berhasil','Terima Kasih',{method:'Ticket',order:'TICKET-'+txt,total:'GRATIS'},()=>{startTimer();goToFrame()});
+                    } else {
+                        _scanP=false; showModal('Ticket Tidak Valid','Coba scan ulang','❌');
+                    }
+                }catch(e){_scanP=false;}
+            }, ()=>{});
+        } else {
+            showModal('Kamera Error','Kamera tidak ditemukan','❌');
+        }
+    } catch(e) {
+        console.error(e);
+        showModal('Kamera Error','Gagal mengakses kamera','❌');
+    }
+}
 function stopTicketScan(){if(_scanner){try{_scanner.stop().catch(()=>{})}catch(_){}try{_scanner.clear()}catch(_){}_scanner=null}}
 
 // QRIS
