@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fotosphere · Self Photo Studio</title>
+    <title>Fotosphere</title>
     <link rel="icon" href="assets/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -20,7 +20,7 @@
             <a href="/admin" style="text-decoration:none"><img src="assets/icon.png" alt="Fotosphere"
                     class="home-logo"></a>
             <h1 class="home-brand">FOTOSPHERE</h1>
-            <p class="home-sub">✦ Self Photo Studio ✦</p>
+            <p class="home-sub">Self Photobox</p>
             <button class="btn-pink" onclick="goPaymentMethod()">TAP TO START</button>
             <p class="home-tag">Your Epic Shots are on the Way!</p>
             <div class="home-pm">
@@ -84,7 +84,7 @@
             <button class="backBtn" onclick="goPaymentMethod()"></button>
             <h2 class="pgTitle">PEMBAYARAN QRIS</h2>
             <div class="qrBox" id="qr-box"><span class="qrPh">Memuat...</span></div>
-            <p class="qrPrice">Rp. 30.000</p>
+            <p class="qrPrice">Rp. 2.000</p>
             <p class="pgDesc">Scan barcode untuk melalukan pembayaran</p>
         </div>
     </section>
@@ -133,7 +133,7 @@
     <!-- FRAME SELECT -->
     <section id="screen-frame" class="screen">
         <div class="splitWrap">
-            <div class="timerPill" id="frame-timer">04.59</div>
+            <div class="timerPill" id="frame-timer">06.59</div>
             <div class="splitInner">
                 <div class="splitL">
                     <div class="bCard">
@@ -163,7 +163,7 @@
     <!-- SHOOT -->
     <section id="screen-shoot" class="screen">
         <div class="splitWrap">
-            <div class="timerPill" id="shoot-timer">04.59</div>
+            <div class="timerPill" id="shoot-timer">06.59</div>
             <div class="splitInner">
                 <div class="splitL camCol">
                     <div class="camCard">
@@ -183,16 +183,22 @@
                         </div>
                     </div>
                     <div class="camCtrls">
-                        <div class="cg"><span class="cgL">Set Timer</span><div class="cgBtns"><button class="cgB on" id="timer-3"
-                                onclick="setTimer(3)">3s</button><button class="cgB" id="timer-5"
-                                onclick="setTimer(5)">5s</button><button class="cgB" id="timer-7"
-                                onclick="setTimer(7)">7s</button></div></div>
-                        <div class="cg"><span class="cgL">Camera Mode</span><div class="cgBtns"><button class="cgB on" id="mb-normal"
-                                onclick="setMirror(false)">Normal</button><button class="cgB" id="mb-mirror"
-                                onclick="setMirror(true)">Mirror</button></div></div>
-                        <div class="cg"><span class="cgL">Live Photo</span><div class="cgBtns"><button class="cgB on" id="lp-on"
-                                onclick="setLivePhoto(true)">On</button><button class="cgB" id="lp-off"
-                                onclick="setLivePhoto(false)">Off</button></div></div>
+                        <div class="cg"><span class="cgL">Set Timer</span>
+                            <div class="cgBtns"><button class="cgB on" id="timer-3"
+                                    onclick="setTimer(3)">3s</button><button class="cgB" id="timer-5"
+                                    onclick="setTimer(5)">5s</button><button class="cgB" id="timer-7"
+                                    onclick="setTimer(7)">7s</button></div>
+                        </div>
+                        <div class="cg"><span class="cgL">Camera Mode</span>
+                            <div class="cgBtns"><button class="cgB on" id="mb-normal"
+                                    onclick="setMirror(false)">Normal</button><button class="cgB" id="mb-mirror"
+                                    onclick="setMirror(true)">Mirror</button></div>
+                        </div>
+                        <div class="cg"><span class="cgL">Live Photo</span>
+                            <div class="cgBtns"><button class="cgB on" id="lp-on"
+                                    onclick="setLivePhoto(true)">On</button><button class="cgB" id="lp-off"
+                                    onclick="setLivePhoto(false)">Off</button></div>
+                        </div>
                     </div>
                 </div>
                 <div class="splitR">
@@ -219,7 +225,7 @@
     <!-- EMOJI -->
     <section id="screen-emoji" class="screen">
         <div class="splitWrap">
-            <div class="timerPill" id="emoji-timer">04.59</div>
+            <div class="timerPill" id="emoji-timer">06.59</div>
             <div class="splitInner">
                 <div class="splitL">
                     <div class="bCard">
@@ -258,7 +264,7 @@
     <section id="screen-filter" class="screen">
         <div class="splitWrap">
             <button class="backBtn" onclick="show('emoji')"></button>
-            <div class="timerPill" id="filter-timer">04.59</div>
+            <div class="timerPill" id="filter-timer">06.59</div>
             <div class="splitInner">
                 <div class="splitL">
                     <div class="bCard">
@@ -362,8 +368,35 @@
         </div>
     </div>
 
+    <div id="progress-modal" class="overlay" style="display:none">
+        <div class="successCard" style="width: 320px; text-align: center; padding: 2rem; border: 3px solid #1a1a1a;">
+            <div id="prog-title" style="font-weight: 800; font-size: 1.2rem; margin-bottom: 1rem;">Uploading...</div>
+            <div id="prog-sub" style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Memproses...</div>
+            <div style="width: 100%; background: #fff; height: 16px; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; border: 2px solid #1a1a1a;">
+                <div id="prog-bar" style="width: 0%; height: 100%; background: #ffb6c1; transition: width 0.3s;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: bold; color: #888; margin-bottom: 1.5rem;">
+                <span id="prog-left">0/0</span>
+                <span id="prog-right">0%</span>
+            </div>
+            <button class="btn-accent" style="width: 100%; background: #2f3640; border-radius: 12px; padding: 0.8rem; letter-spacing: 2px;" onclick="document.getElementById('progress-modal').style.display='none'">HIDE</button>
+        </div>
+    </div>
+    
+    <div id="retake-modal" class="overlay" style="display:none; z-index: 300;">
+        <div class="successCard" style="width: 300px;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📸</div>
+            <div style="font-weight: 800; font-size: 1.2rem; margin-bottom: 0.5rem;">Retake Foto?</div>
+            <div style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">Ingin mengganti foto ini?</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-accent" style="flex: 1; background: #eee; color: #333;" onclick="document.getElementById('retake-modal').style.display='none'">Batal</button>
+                <button class="btn-accent" style="flex: 1;" id="btn-confirm-retake">Ya, Retake</button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="cam-cvs" style="display:none"></canvas>
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
 </body>
 
 </html>

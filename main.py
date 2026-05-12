@@ -284,7 +284,8 @@ def api_get_config():
             "id": f["id"], "name": f["name"], "photos": f["photos"],
             "layout": f["layout"], "width": f["width"], "height": f["height"],
             "slots": f["slots"], "thumb": f"/frames/{f['file']}",
-            "is_private": f.get("is_private", False)
+            "is_private": f.get("is_private", False),
+            "category": f.get("category", "Other")
         } for f in frames],
         "filters": [{"id": k, "name": k} for k in FILTERS.keys()]
     }
@@ -760,11 +761,24 @@ def admin_login_page():
 
 @app.post("/api/admin/login")
 def api_admin_login(username: str = Form(...), password: str = Form(...)):
-    if username == "admin" and password == "fotosphere":
+    admin_password = os.environ.get("ADMIN_PASSWORD", "fotosphere")
+    if username == "admin" and password == admin_password:
         response = JSONResponse({"success": True})
         response.set_cookie(key="admin_token", value="super_secret_fotosphere_token", httponly=True)
         return response
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@app.post("/api/admin/change_password")
+def api_admin_change_password(request: Request, new_password: str = Form(...)):
+    token = request.cookies.get("admin_token")
+    if token != "super_secret_fotosphere_token":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    import dotenv
+    env_file = ".env"
+    dotenv.set_key(env_file, "ADMIN_PASSWORD", new_password)
+    os.environ["ADMIN_PASSWORD"] = new_password
+    return {"success": True}
 
 @app.get("/admin")
 def admin_page(request: Request):
@@ -812,7 +826,8 @@ async def admin_upload_frame(
     frame: UploadFile = File(...),
     name: str = Form(None),
     is_private: str = Form("false"),
-    whatsapp: str = Form(None)
+    whatsapp: str = Form(None),
+    category: str = Form("Other")
 ):
     if not frame.filename.lower().endswith(".png"):
         raise HTTPException(400, "Only PNG files allowed")
@@ -848,6 +863,7 @@ async def admin_upload_frame(
     
     data["display_name"] = display
     data["is_private"] = is_private_bool
+    data["category"] = category.strip() if category else "Other"
     
     with open(json_path, 'w') as f:
         json.dump(data, f, indent=2)
@@ -876,7 +892,7 @@ async def admin_upload_frame(
             
             # WhatsApp text with ticket code
             qr_url = f"{base}api/qr/{ticket_code}"
-            text = f"Halo! Ini akses eksklusif Photobooth kamu.%0A%0ABuka link di bawah ini untuk melihat *Barcode Tiket* yang bisa di-scan ke kamera photobooth:%0A{qr_url}%0A%0A(Atau kamu juga bisa mengetik kodenya manual di menu Voucher: *{ticket_code}*)%0A%0ASelamat berfoto! ✨"
+            text = f"Halo! Ini akses eksklusif Photobooth kamu.%0A%0ABuka link di bawah ini untuk melihat *Barcode Tiket* yang bisa di-scan ke kamera photobooth:%0A{qr_url}%0A%0A(Atau kamu juga bisa mengetik kodenya manual di menu Voucher: *{ticket_code}*)%0A%0ASelamat berfoto!"
             wa_link = f"https://wa.me/{wa_num}?text={text}"
 
     # Upload to Supabase Storage + DB

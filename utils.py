@@ -339,6 +339,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
             slots = get_frame_slots(fpath)
             
             is_private = False
+            category = "Other"
             # Load display name if present in JSON
             if os.path.exists(json_path):
                 try:
@@ -347,6 +348,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
                     if "display_name" in jdata:
                         name = jdata["display_name"]
                     is_private = jdata.get("is_private", False)
+                    category = jdata.get("category", "Other")
                 except:
                     pass
             
@@ -369,6 +371,7 @@ def scan_frames_dir(frames_dir: str = "static/frames") -> list:
                 "height": fh,
                 "slots": slots,
                 "is_private": is_private,
+                "category": category,
             })
         except Exception as e:
             print(f"Error scanning frame {fname}: {e}")

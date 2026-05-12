@@ -6,15 +6,35 @@ function hideModal(){document.getElementById('overlay-modal').style.display='non
 const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[]};
 const $=id=>document.getElementById(id);
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$('screen-'+id).classList.add('active')};
-function loader(m){$('loader-msg').textContent=m||'MEMPROSES...';$('loader').style.display='flex'}
-function noloader(){$('loader').style.display='none'}
+let _progInt=null;
+function loader(m){
+    const pm=$('progress-modal');
+    if(pm){
+        $('prog-sub').textContent=m||'MEMPROSES...';$('prog-bar').style.width='0%';
+        $('prog-left').textContent='0/100';$('prog-right').textContent='0%';
+        pm.style.display='flex';let p=0;if(_progInt)clearInterval(_progInt);
+        _progInt=setInterval(()=>{p+=Math.random()*15;if(p>90)p=90;$('prog-bar').style.width=p+'%';$('prog-left').textContent=Math.floor(p)+'/100';$('prog-right').textContent=Math.floor(p)+'%';},200);
+    } else {
+        $('loader-msg').textContent=m||'MEMPROSES...';$('loader').style.display='flex';
+    }
+}
+function noloader(){
+    const pm=$('progress-modal');
+    if(pm){
+        if(_progInt)clearInterval(_progInt);
+        $('prog-bar').style.width='100%';$('prog-left').textContent='100/100';$('prog-right').textContent='100%';
+        setTimeout(()=>{pm.style.display='none'},300);
+    } else {
+        $('loader').style.display='none';
+    }
+}
 function showSuccess(t,s,inv,cb){$('success-text').textContent=t;$('success-sub').textContent=s||'Terima Kasih';const b=$('invoice-box');if(inv){$('inv-method').textContent=inv.method||'-';$('inv-order').textContent=inv.order||'-';$('inv-total').textContent=inv.total||'-';b.style.display='block'}else b.style.display='none';$('success-overlay').style.display='flex';setTimeout(()=>{$('success-overlay').style.display='none';if(cb)cb()},3000)}
 function vkType(ch){$('voucher-input').value+=ch}
 function vkDel(){$('voucher-input').value=$('voucher-input').value.slice(0,-1)}
 
 // Init
 async function init(){try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;buildCats()}catch(e){console.error(e)}}
-function buildCats(){S.categories={};S.frames.forEach(f=>{if(f.is_private)return;let c=f.name||f.id;if(!S.categories[c])S.categories[c]=[];S.categories[c].push(f)})}
+function buildCats(){S.categories={};S.frames.forEach(f=>{if(f.is_private)return;let c=f.category||'Other';if(!S.categories[c])S.categories[c]=[];S.categories[c].push(f)})}
 init();
 
 // Timer
@@ -97,7 +117,7 @@ function updateShootPrev(){
     h+='</div>';b.innerHTML=h;
     const filled=S.photos.filter(p=>p!==null).length;$('shoot-progress').textContent=`${filled}/${S.max}`;$('btn-to-emoji').style.display=filled>=S.max?'flex':'none';
 }
-function confirmRetake(i){if(confirm('Ulangi foto ini?'))retakeSlot(i)}
+let _retakeI=null;function confirmRetake(i){_retakeI=i;$('retake-modal').style.display='flex';$('btn-confirm-retake').onclick=()=>{$('retake-modal').style.display='none';retakeSlot(_retakeI)};}
 function retakeSlot(i){if(!S.photos[i])return;S.photos[i]=null;S.liveClips[i]=null;if(i<S.slot)S.slot=i;$('btn-to-emoji').style.display='none';updateShootPrev();updateCropGuide();showTapOv()}
 function showTapOv(){$('cam-tap').classList.remove('hidden');$('cam-tap-sub').textContent=`Foto ${S.slot+1}/${S.max}`;document.querySelector('.cropGuide').style.display='none'}
 function tapToShoot(){$('cam-tap').classList.add('hidden');document.querySelector('.cropGuide').style.display='block';setTimeout(()=>updateCropGuide(),100);startCountdown()}
