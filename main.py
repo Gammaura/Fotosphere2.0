@@ -30,8 +30,8 @@ from db import (
     create_session, update_session, upload_photo, upload_strip, upload_file,
     get_session, get_all_sessions,
     # Frames
-    db_upsert_frame, db_delete_frame, storage_upload_frame,
-    db_upsert_custom_frame, db_delete_custom_frame, storage_upload_custom_frame,
+    db_upsert_frame, db_delete_frame, storage_upload_frame, storage_download_frame,
+    db_upsert_custom_frame, db_delete_custom_frame, storage_upload_custom_frame, storage_download_custom_frame,
     sync_frames_to_local, upload_local_frames_to_supabase,
     # Vouchers
     db_upsert_voucher, db_update_voucher_uses, db_delete_voucher,
@@ -499,15 +499,42 @@ def log_debug(msg):
     with open("static/debug.log", "a") as f:
         f.write(f"[{datetime.utcnow()}] {msg}\n")
 
-@app.get("/api/session/{session_id}/preview")
-def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int = 0):
-    if session_id not in SESSION_STORE:
-        log_debug(f"PREVIEW FAIL: session {session_id} not in store")
-        raise HTTPException(status_code=404, detail="Session not in store")
+async def ensure_session_loaded(session_id: str):
+    """Ensures session photos are in memory, downloading from Supabase if needed."""
+    if session_id in SESSION_STORE and SESSION_STORE[session_id].get("photos"):
+        return True
+    
+    log_debug(f"Session {session_id} not in memory, attempting recovery from Supabase...")
+    sess = get_session(session_id)
+    if not sess or not sess.get("photo_urls"):
+        log_debug(f"SESSION RECOVERY FAIL: session {session_id} not found in DB or no photos")
+        return False
+    
+    import requests
+    photo_bytes = []
+    for url in sess["photo_urls"]:
+        try:
+            r = requests.get(url, timeout=5)
+            if r.ok: photo_bytes.append(r.content)
+        except: pass
+    
+    if not photo_bytes:
+        log_debug(f"SESSION RECOVERY FAIL: could not download photos for {session_id}")
+        return False
         
-    if not SESSION_STORE[session_id].get("photos"):
-        log_debug(f"PREVIEW FAIL: session {session_id} has no photos")
-        raise HTTPException(status_code=404, detail="No photos in session")
+    SESSION_STORE[session_id] = {
+        "photos": photo_bytes,
+        "frame_id": sess.get("frame_choice"),
+        "mirror": sess.get("mirror", False),
+        "created_at": datetime.utcnow()
+    }
+    log_debug(f"Session {session_id} recovered successfully")
+    return True
+
+@app.get("/api/session/{session_id}/preview")
+async def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int = 0):
+    if not await ensure_session_loaded(session_id):
+        raise HTTPException(status_code=404, detail="Session not found or no photos")
 
     data = SESSION_STORE[session_id]
     if thumb and "thumb_base" in data:
@@ -531,9 +558,27 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
     if not os.path.exists(frame_path):
         frame_path = os.path.join("static/custom_frames", frame_id)
 
+    # 2. Download frame from Supabase if missing locally (critical for cloud)
     if not os.path.exists(frame_path) or os.path.isdir(frame_path):
-        log_debug(f"PREVIEW FAIL: frame {frame_id} not found at {frame_path}")
-        raise HTTPException(status_code=404, detail="Frame not found")
+        log_debug(f"Frame {frame_id} missing locally, downloading from Supabase...")
+        try:
+            # Try public frames
+            fb = storage_download_frame(frame_id)
+            if not fb:
+                # Try custom frames
+                fb = storage_download_custom_frame(frame_id)
+            
+            if fb:
+                os.makedirs(os.path.dirname(frame_path), exist_ok=True)
+                with open(frame_path, "wb") as f:
+                    f.write(fb)
+                log_debug(f"Frame {frame_id} downloaded successfully")
+            else:
+                log_debug(f"PREVIEW FAIL: frame {frame_id} not in storage")
+                raise HTTPException(404, "Frame not found in storage")
+        except Exception as e:
+            log_debug(f"FRAME DOWNLOAD ERROR: {e}")
+            raise HTTPException(500, "Frame download failed")
 
     try:
         photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
@@ -559,7 +604,7 @@ async def api_finalize_strip(
     sticker_overlay: Optional[UploadFile] = File(None),
     live_clips: List[UploadFile] = File(default=[])
 ):
-    if session_id not in SESSION_STORE or not SESSION_STORE[session_id]["photos"]:
+    if not await ensure_session_loaded(session_id):
         raise HTTPException(status_code=404, detail="Session not found or no photos")
 
     data = SESSION_STORE[session_id]
@@ -1114,6 +1159,13 @@ def admin_delete_ticket(code: str, _=Depends(require_admin)):
         del TICKET_CODES[code]
     db_delete_ticket(code)
     return {"success": True}
+
+@app.get("/api/admin/debug-log")
+def admin_view_debug_log(_=Depends(require_admin)):
+    if os.path.exists("static/debug.log"):
+        with open("static/debug.log", "r") as f:
+            return Response(content=f.read(), media_type="text/plain")
+    return Response(content="No log found", media_type="text/plain")
 
 # Serve static (LAST)
 app.mount("/custom_frames", StaticFiles(directory="static/custom_frames"), name="custom_frames")
