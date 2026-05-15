@@ -769,8 +769,7 @@ def download_page(session_id: str, request: Request):
         live_frame_html = ""
         if frame_info and live_clip_urls:
             fw, fh = frame_info["width"], frame_info["height"]
-            frame_thumb_prefix = "/custom_frames/" if frame_info.get("is_private") else "/frames/"
-            frame_thumb = f"{frame_thumb_prefix}{frame_info['file']}"
+            frame_thumb = frame_info.get("thumb", f"/frames/{frame_choice}")
             slots_html = ""
             for i, s in enumerate(frame_info.get("slots", [])):
                 if i >= len(live_clip_urls): break
