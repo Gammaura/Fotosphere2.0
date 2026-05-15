@@ -332,17 +332,17 @@
     </div>
 
     <div id="progress-modal" class="overlay" style="display:none">
-        <div class="successCard" style="width: 320px; text-align: center; padding: 2rem; border: 3px solid #1a1a1a;">
+        <div class="successCard">
             <div id="prog-title" style="font-weight: 800; font-size: 1.2rem; margin-bottom: 1rem;">Uploading...</div>
             <div id="prog-sub" style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Memproses...</div>
-            <div style="width: 100%; background: #fff; height: 16px; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; border: 2px solid #1a1a1a;">
-                <div id="prog-bar" style="width: 0%; height: 100%; background: #e91e63; transition: width 0.3s;"></div>
+            <div style="width: 100%; background: #f0f0f0; height: 16px; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; border: 2px solid #ddd;">
+                <div id="prog-bar" style="width: 0%; height: 100%; background: var(--accent, #e91e63); transition: width 0.3s; border-radius: 8px;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: bold; color: #888; margin-bottom: 1.5rem;">
                 <span id="prog-left">0/0</span>
                 <span id="prog-right">0%</span>
             </div>
-            <button class="btn-accent" style="width: 100%; background: #2f3640; border-radius: 12px; padding: 0.8rem; letter-spacing: 2px;" onclick="document.getElementById('progress-modal').style.display='none'">HIDE</button>
+            <button class="btn-accent" style="width: 100%; border-radius: 12px; padding: 0.8rem; letter-spacing: 2px;" onclick="document.getElementById('progress-modal').style.display='none'">HIDE</button>
         </div>
     </div>
     
@@ -360,7 +360,7 @@
     </div>
 
     <canvas id="cam-cvs" style="display:none"></canvas>
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=21"></script>
 </body>
 
 </html>

@@ -307,13 +307,25 @@ async function capturePhoto(){
     },'image/png');
 }
 
-// Filter
+// Upload photos & go to Filter
 async function goToFilter(){
     if(!S.frame) return;
-    $('filter-frame-name').textContent=S.frame.name;
-    $('filter-photo-total').textContent=S.max+' Photo';
-    $('filter-status').textContent=S.filter;
-    renderFilters(); show('filter'); loadPreview();
+    stopCam();
+    loader('MENGUNGGAH FOTO...');setProgress(10,'Mengunggah foto...');
+    const fd=new FormData();fd.append('frame_id',S.frame.id);fd.append('mirror',S.mirror);
+    S.photos.forEach((b,i)=>{if(b)fd.append('photos',b,`photo_${i}.png`)});
+    try{
+        setProgress(40,'Memproses...');
+        const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});
+        if(!r.ok) throw new Error('Upload failed');
+        setProgress(100,'Selesai!');
+        noloader();
+        // Now show filter screen
+        $('filter-frame-name').textContent=S.frame.name;
+        $('filter-photo-total').textContent=S.max+' Photo';
+        $('filter-status').textContent=S.filter;
+        renderFilters(); show('filter'); loadPreview();
+    }catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
 }
 function renderFilters(){
     const g=$('filter-grid');g.innerHTML='';
