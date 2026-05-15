@@ -730,148 +730,154 @@ async def download_proxy(request: Request, url: str, filename: str, inline: bool
 
 @app.get("/download/{session_id}", response_class=HTMLResponse)
 def download_page(session_id: str, request: Request):
-    session_data = get_session(session_id)
-    if not session_data:
-        raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        session_data = get_session(session_id)
+        if not session_data:
+            return HTMLResponse("<h1>Session tidak ditemukan</h1><p>Link ini mungkin sudah kadaluarsa.</p>", status_code=404)
 
-    strip_url = session_data.get("strip_url", "")
-    photo_urls = session_data.get("photo_urls", [])
-    frame_choice = session_data.get("frame_choice", "")
-    
-    # Get frame metadata for live photo frame view
-    frame_info = None
-    if frame_choice:
-        frames = get_frames()
-        for f in frames:
-            if f["id"] == frame_choice:
-                frame_info = f
-                break
-    
-    gif_url = ""
-    base_path = ""
-    if strip_url:
-        base_path = strip_url.rsplit("/", 1)[0]
-        gif_url = f"{base_path}/anim.gif"
-        if not photo_urls:
-            photo_urls = [f"{base_path}/photo_{i}.png" for i in range(6)]
-    
-    n_clips = frame_info["photos"] if frame_info else 6
-    live_clip_urls = [f"{base_path}/live_{i}.webm" for i in range(n_clips)] if base_path else []
-
-    def p(u, f): 
-        if not u: return "#"
-        safe_url = urllib.parse.quote(u, safe='')
-        return f"/api/download-proxy?url={safe_url}&filename={f}"
-
-    def p_inline(u, f):
-        if not u: return "#"
-        safe_url = urllib.parse.quote(u, safe='')
-        return f"/api/download-proxy?url={safe_url}&filename={f}&inline=true"
-
-    # Build live photo frame HTML (videos inside frame slots)
-    live_frame_html = ""
-    if frame_info and live_clip_urls:
-        fw, fh = frame_info["width"], frame_info["height"]
-        frame_thumb = f"/frames/{frame_info['file']}"
-        slots_html = ""
-        for i, s in enumerate(frame_info["slots"]):
-            if i >= len(live_clip_urls): break
-            lp = s["x"]/fw*100; tp = s["y"]/fh*100
-            wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
+        strip_url = session_data.get("strip_url") or ""
+        photo_urls = session_data.get("photo_urls") or []
+        frame_choice = session_data.get("frame_choice") or ""
         
-        slots_json = json.dumps(frame_info["slots"])
+        # Get frame metadata — search both public and custom frames
+        frame_info = None
+        if frame_choice:
+            all_frames = get_frames() + scan_frames_dir("static/custom_frames")
+            for f in all_frames:
+                if f["id"] == frame_choice:
+                    frame_info = f
+                    break
         
-        live_frame_html = f"""
-            <div id="live-section" style="display:none">
-            <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
-            <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111;">
-                <img id="live-frame-img" src="{frame_thumb}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none;">
-                {slots_html}
-            </div>
-            <button id="btn-download-live" class="btn" onclick="downloadLiveVideo()" style="margin-bottom:20px">🎥 UNDUH LIVE PHOTO</button>
-            <div id="live-loading" style="display:none;font-size:0.8rem;color:#666;margin-bottom:20px;font-weight:bold">Memproses Video... (Mohon tunggu)</div>
-            </div>
+        gif_url = ""
+        base_path = ""
+        if strip_url:
+            base_path = strip_url.rsplit("/", 1)[0]
+            gif_url = f"{base_path}/anim.gif"
+            if not photo_urls:
+                photo_urls = [f"{base_path}/photo_{i}.png" for i in range(6)]
+        
+        n_clips = frame_info["photos"] if frame_info else 6
+        live_clip_urls = [f"{base_path}/live_{i}.webm" for i in range(n_clips)] if base_path else []
+
+        def p(u, f): 
+            if not u: return "#"
+            safe_url = urllib.parse.quote(u, safe='')
+            return f"/api/download-proxy?url={safe_url}&filename={f}"
+
+        def p_inline(u, f):
+            if not u: return "#"
+            safe_url = urllib.parse.quote(u, safe='')
+            return f"/api/download-proxy?url={safe_url}&filename={f}&inline=true"
+
+        # Build live photo frame HTML (videos inside frame slots)
+        live_frame_html = ""
+        if frame_info and live_clip_urls:
+            fw, fh = frame_info["width"], frame_info["height"]
+            frame_thumb_prefix = "/custom_frames/" if frame_info.get("is_private") else "/frames/"
+            frame_thumb = f"{frame_thumb_prefix}{frame_info['file']}"
+            slots_html = ""
+            for i, s in enumerate(frame_info.get("slots", [])):
+                if i >= len(live_clip_urls): break
+                lp = s["x"]/fw*100; tp = s["y"]/fh*100
+                wp = s["w"]/fw*100; hp = s["h"]/fh*100
+                v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
+                slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
             
-            <script>
-                (function(){{
-                    var sec=document.getElementById('live-section');
-                    if(!sec)return;
-                    var vids=document.querySelectorAll('#live-frame-container video');
-                    var ok=0,fail=0,tot=vids.length;
-                    if(!tot)return;
-                    function chk(){{if(ok>0)sec.style.display='block';if(ok+fail>=tot&&ok===0)sec.style.display='none';}}
-                    vids.forEach(function(v){{v.onloadeddata=function(){{ok++;chk();}};v.onerror=function(){{fail++;v.parentElement.style.background='#333';chk();}}}});
-                    setTimeout(function(){{if(ok===0)sec.style.display='none';}},5000);
-                }})();
+            slots_json = json.dumps(frame_info.get("slots", []))
+            
+            live_frame_html = f"""
+                <div id="live-section" style="display:none">
+                <h2>🎬 LIVE PHOTO <span class="live-badge">Video</span></h2>
+                <div id="live-frame-container" style="position:relative;width:100%;aspect-ratio:{fw}/{fh};border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 10px 20px rgba(0,0,0,0.03);background:#111;">
+                    <img id="live-frame-img" src="{frame_thumb}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;margin:0;border-radius:0;box-shadow:none;">
+                    {slots_html}
+                </div>
+                <button id="btn-download-live" class="btn" onclick="downloadLiveVideo()" style="margin-bottom:20px">🎥 UNDUH LIVE PHOTO</button>
+                <div id="live-loading" style="display:none;font-size:0.8rem;color:#666;margin-bottom:20px;font-weight:bold">Memproses Video... (Mohon tunggu)</div>
+                </div>
                 
-                async function downloadLiveVideo() {{
-                    var btn=document.getElementById('btn-download-live');
-                    var loader=document.getElementById('live-loading');
-                    btn.style.display='none';loader.style.display='block';
-                    try {{
-                        var container=document.getElementById('live-frame-container');
-                        var videos=container.querySelectorAll('video');
-                        var frameImg=document.getElementById('live-frame-img');
-                        var ready=Array.from(videos).filter(function(v){{return v.readyState>=2;}});
-                        if(ready.length===0){{alert('Video belum dimuat.');btn.style.display='flex';loader.style.display='none';return;}}
-                        var maxD=2160; // Ultra HD limit
-                        var rw={fw}, rh={fh};
-                        if(rw>maxD || rh>maxD){{ var rat=Math.min(maxD/rw, maxD/rh); rw=Math.floor(rw*rat); rh=Math.floor(rh*rat); }}
-                        var cvs=document.createElement('canvas');cvs.width=rw;cvs.height=rh;
-                        var ctx=cvs.getContext('2d');
-                        var scale_x = rw/{fw}, scale_y = rh/{fh};
-                        await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
-                        await new Promise(function(r){{setTimeout(r,200);}});
-                        var stream=cvs.captureStream(30);
-                        var mime='video/webm;codecs=vp9';
-                        if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';
-                        if(!MediaRecorder.isTypeSupported(mime))mime='video/mp4';
-                        var recorder=new MediaRecorder(stream,{{mimeType:mime}});
-                        var chunks=[];
-                        recorder.ondataavailable=function(e){{if(e.data.size>0)chunks.push(e.data);}};
-                        var recording=true;
-                        var slots={slots_json};
-                        function draw(){{
-                            if(!recording)return;
-                            ctx.fillStyle='#fff';ctx.fillRect(0,0,cvs.width,cvs.height);
-                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x*scale_x,s.y*scale_y,s.w*scale_x,s.h*scale_y);}}}});
-                            if(frameImg.complete)ctx.drawImage(frameImg,0,0,cvs.width,cvs.height);
-                            requestAnimationFrame(draw);
-                        }}
-                        recorder.onstop=function(){{
-                            recording=false;
-                            var blob=new Blob(chunks,{{type:mime}});
-                            var url=URL.createObjectURL(blob);
-                            var a=document.createElement('a');a.href=url;
-                            a.download='fotosphere_live.'+(mime.indexOf('mp4')>=0?'mp4':'webm');
-                            document.body.appendChild(a);a.click();document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
+                <script>
+                    (function(){{
+                        var sec=document.getElementById('live-section');
+                        if(!sec)return;
+                        var vids=document.querySelectorAll('#live-frame-container video');
+                        var ok=0,fail=0,tot=vids.length;
+                        if(!tot)return;
+                        function chk(){{if(ok>0)sec.style.display='block';if(ok+fail>=tot&&ok===0)sec.style.display='none';}}
+                        vids.forEach(function(v){{v.onloadeddata=function(){{ok++;chk();}};v.onerror=function(){{fail++;v.parentElement.style.background='#333';chk();}}}});
+                        setTimeout(function(){{if(ok===0)sec.style.display='none';}},5000);
+                    }})();
+                    
+                    async function downloadLiveVideo() {{
+                        var btn=document.getElementById('btn-download-live');
+                        var loader=document.getElementById('live-loading');
+                        btn.style.display='none';loader.style.display='block';
+                        try {{
+                            var container=document.getElementById('live-frame-container');
+                            var videos=container.querySelectorAll('video');
+                            var frameImg=document.getElementById('live-frame-img');
+                            var ready=Array.from(videos).filter(function(v){{return v.readyState>=2;}});
+                            if(ready.length===0){{alert('Video belum dimuat.');btn.style.display='flex';loader.style.display='none';return;}}
+                            var maxD=2160; // Ultra HD limit
+                            var rw={fw}, rh={fh};
+                            if(rw>maxD || rh>maxD){{ var rat=Math.min(maxD/rw, maxD/rh); rw=Math.floor(rw*rat); rh=Math.floor(rh*rat); }}
+                            var cvs=document.createElement('canvas');cvs.width=rw;cvs.height=rh;
+                            var ctx=cvs.getContext('2d');
+                            var scale_x = rw/{fw}, scale_y = rh/{fh};
+                            await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
+                            await new Promise(function(r){{setTimeout(r,200);}});
+                            var stream=cvs.captureStream(30);
+                            var mime='video/webm;codecs=vp9';
+                            if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';
+                            if(!MediaRecorder.isTypeSupported(mime))mime='video/mp4';
+                            var recorder=new MediaRecorder(stream,{{mimeType:mime}});
+                            var chunks=[];
+                            recorder.ondataavailable=function(e){{if(e.data.size>0)chunks.push(e.data);}};
+                            var recording=true;
+                            var slots={slots_json};
+                            function draw(){{
+                                if(!recording)return;
+                                ctx.fillStyle='#fff';ctx.fillRect(0,0,cvs.width,cvs.height);
+                                videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x*scale_x,s.y*scale_y,s.w*scale_x,s.h*scale_y);}}}});
+                                if(frameImg.complete)ctx.drawImage(frameImg,0,0,cvs.width,cvs.height);
+                                requestAnimationFrame(draw);
+                            }}
+                            recorder.onstop=function(){{
+                                recording=false;
+                                var blob=new Blob(chunks,{{type:mime}});
+                                var url=URL.createObjectURL(blob);
+                                var a=document.createElement('a');a.href=url;
+                                a.download='fotosphere_live.'+(mime.indexOf('mp4')>=0?'mp4':'webm');
+                                document.body.appendChild(a);a.click();document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                                btn.style.display='flex';loader.style.display='none';
+                            }};
+                            recorder.start(100);draw();
+                            // Freeze videos at the end like iPhone Live Photo
+                            setTimeout(function(){{ videos.forEach(function(v){{ v.pause(); }}); }}, 2500);
+                            setTimeout(function(){{recorder.stop();}},4000);
+                        }} catch(err) {{
+                            console.error(err);alert('Gagal: '+err.message);
                             btn.style.display='flex';loader.style.display='none';
-                        }};
-                        recorder.start(100);draw();
-                        // Freeze videos at the end like iPhone Live Photo
-                        setTimeout(function(){{ videos.forEach(function(v){{ v.pause(); }}); }}, 2500);
-                        setTimeout(function(){{recorder.stop();}},4000);
-                    }} catch(err) {{
-                        console.error(err);alert('Gagal: '+err.message);
-                        btn.style.display='flex';loader.style.display='none';
+                        }}
                     }}
-                }}
-            </script>
-        """
+                </script>
+            """
 
-    return templates.TemplateResponse("download.html", {
-        "request": request,
-        "strip_url": strip_url,
-        "gif_url": gif_url,
-        "photo_urls": photo_urls,
-        "live_urls": live_clip_urls,
-        "live_frame_html": live_frame_html,
-        "p": p,
-        "request_url": str(request.url)
-    })
+        return templates.TemplateResponse("download.html", {
+            "request": request,
+            "strip_url": strip_url,
+            "gif_url": gif_url,
+            "photo_urls": photo_urls,
+            "live_urls": live_clip_urls,
+            "live_frame_html": live_frame_html,
+            "p": p,
+            "request_url": str(request.url)
+        })
+    except Exception as e:
+        print(f"[DOWNLOAD PAGE ERROR] session={session_id}: {e}")
+        import traceback; traceback.print_exc()
+        return HTMLResponse(f"<h1>Error</h1><p>{str(e)}</p>", status_code=500)
 
 # ═══════════════════════════════════════════════════════════
 # ADMIN PANEL
