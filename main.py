@@ -736,17 +736,13 @@ def download_page(session_id: str, request: Request):
             return HTMLResponse("<h1>Session tidak ditemukan</h1><p>Link ini mungkin sudah kadaluarsa.</p>", status_code=404)
 
         strip_url = session_data.get("strip_url") or ""
-        photo_urls = session_data.get("photo_urls") or []
+        raw_photos = session_data.get("photo_urls") or []
+        # Ensure photo_urls is always a flat list of strings
+        photo_urls = [str(u) for u in raw_photos] if isinstance(raw_photos, list) else []
         frame_choice = session_data.get("frame_choice") or ""
         
-        # Get frame metadata — search both public and custom frames
-        frame_info = None
-        if frame_choice:
-            all_frames = get_frames() + scan_frames_dir("static/custom_frames")
-            for f in all_frames:
-                if f["id"] == frame_choice:
-                    frame_info = f
-                    break
+        # Get frame metadata using find_frame_data helper (safer than scan_frames_dir)
+        frame_info = find_frame_data(frame_choice) if frame_choice else None
         
         gif_url = ""
         base_path = ""
@@ -875,9 +871,10 @@ def download_page(session_id: str, request: Request):
             "request_url": str(request.url)
         })
     except Exception as e:
-        print(f"[DOWNLOAD PAGE ERROR] session={session_id}: {e}")
-        import traceback; traceback.print_exc()
-        return HTMLResponse(f"<h1>Error</h1><p>{str(e)}</p>", status_code=500)
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[DOWNLOAD PAGE ERROR] session={session_id}: {e}\n{tb}")
+        return HTMLResponse(f"<h1>Error</h1><pre>{tb}</pre>", status_code=500)
 
 # ═══════════════════════════════════════════════════════════
 # ADMIN PANEL
