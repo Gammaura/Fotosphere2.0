@@ -690,10 +690,12 @@ def download_page(session_id: str, request: Request):
     live_clip_urls = [f"{base_path}/live_{i}.webm" for i in range(n_clips)] if base_path else []
 
     def p(u, f): 
+        if not u: return "#"
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}"
 
     def p_inline(u, f):
+        if not u: return "#"
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}&inline=true"
 

@@ -100,30 +100,24 @@ function goVoucher(){show('voucher');$('voucher-input').value=''}
 async function claimVoucher(){const code=$('voucher-input').value.trim();if(!code)return showModal('Perhatian','Masukkan kode voucher','💡');loader('MEMVERIFIKASI...');try{const r=await fetch('/api/voucher/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const d=await r.json();noloader();if(d.valid){S.sid=d.session_id;if(d.custom_frame_data){S.frame=d.custom_frame_data;if(S.frame){S.max=S.frame.photos;showSuccess('Voucher Berhasil','Terima Kasih',{method:'Voucher',order:'VOUCHER-'+code.toUpperCase(),total:'GRATIS'},()=>{startTimer();goToShoot()});return}}showSuccess('Voucher Berhasil','Terima Kasih',{method:'Voucher',order:'VOUCHER-'+code.toUpperCase(),total:'GRATIS'},()=>{startTimer();goToFrame()})}else showModal('Gagal',d.error||'Tidak valid','❌')}catch(e){noloader();showModal('Error',e.message,'⚠️')}}
 
 // Frame select
-let _activeCat='all';
-async function goToFrame(){loader('MEMUAT FRAME...');try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;buildCats()}catch(e){}noloader();_activeCat='all';if(S.frame&&!S.frames.find(f=>f.id===S.frame.id))S.frame=null;renderFramePanel();updateFPrev();show('frame')}
+async function goToFrame(){loader('MEMUAT FRAME...');try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;}catch(e){}noloader();if(S.frame&&!S.frames.find(f=>f.id===S.frame.id))S.frame=null;renderFramePanel();updateFPrev();show('frame')}
 
 function renderFramePanel(){
     const body=$('frame-body');body.innerHTML='';
-    const catKeys=Object.keys(S.categories);
-    $('frame-card-head').textContent='ADD FRAME';
-
-    // Category tabs (horizontal scroll)
-    let tabsH='<div class="catTabs"><div class="catTabsInner">';
-    tabsH+=`<button class="catTab${_activeCat==='all'?' active':''}" onclick="filterCat('all')">All Frame</button>`;
-    catKeys.forEach(cat=>{
-        tabsH+=`<button class="catTab${_activeCat===cat?' active':''}" onclick="filterCat('${cat}')">${cat}</button>`;
-    });
-    tabsH+='</div></div>';
-
-    // Filtered frames (vertical scroll)
-    const frames=_activeCat==='all'?S.frames.filter(f=>!f.is_private):(S.categories[_activeCat]||[]);
+    const frames=S.frames.filter(f=>!f.is_private);
     let gridH='<div class="frameGrid">';
     if(!frames.length){gridH+='<div class="emptyFrameMsg">Belum ada frame.</div>'}
-    else frames.forEach(f=>{const sel=S.frame&&S.frame.id===f.id;const thumbUrl=`/api/frames/thumb/${f.file||f.id}`;gridH+=`<div class="fc${sel?' sel':''}" onclick="pickFrame('${f.id}')"><div class="fcThumb"><img src="${thumbUrl}" loading="lazy"></div><div class="fcName">${f.name}</div><div class="fcBadge">${f.photos} Foto</div></div>`});
+    else frames.forEach(f=>{
+        const sel=S.frame&&S.frame.id===f.id;
+        const thumbUrl=`/api/frames/thumb/${f.file||f.id}`;
+        gridH+=`<div class="fc${sel?' sel':''}" onclick="pickFrame('${f.id}')">
+            <div class="fcThumb"><img src="${thumbUrl}" loading="lazy"></div>
+            <div class="fcName">${f.name}</div>
+            <div class="fcBadge">${f.photos} Foto</div>
+        </div>`
+    });
     gridH+='</div>';
-
-    body.innerHTML=tabsH+gridH;
+    body.innerHTML=gridH;
 }
 function filterCat(cat){_activeCat=cat;renderFramePanel()}
 function pickFrame(id){S.frame=S.frames.find(f=>f.id===id);if(S.frame)S.max=S.frame.photos;renderFramePanel();updateFPrev()}
@@ -154,10 +148,10 @@ function updateShootPrev(){
     let h=`<div class="framePrev" style="width:100%;aspect-ratio:${f.width}/${f.height};max-height:100%"><img class="frameImg" src="${f.thumb}">`;
     f.slots.forEach((s,i)=>{const l=(s.x/f.width*100).toFixed(2),t=(s.y/f.height*100).toFixed(2),w=(s.w/f.width*100).toFixed(2),hh=(s.h/f.height*100).toFixed(2);const act=i===S.slot&&!S.photos[i];let c='';if(S.photos[i])c=`<img src="${S.photoUrls[i]}" onclick="confirmRetake(${i})"><button class="retakeBtn" onclick="confirmRetake(${i})">Retake</button>`;else if(act)c=`<div style="width:100%;height:100%;background:rgba(139,26,26,.08);display:flex;align-items:center;justify-content:center"><span class="slotNumber" style="color:var(--accent)">${i+1}</span></div>`;else c=`<div style="width:100%;height:100%;background:#f5f5f5;display:flex;align-items:center;justify-content:center"><span class="slotNumber">${i+1}</span></div>`;h+=`<div class="slotWrap${act?' slotActive':''}" style="left:${l}%;top:${t}%;width:${w}%;height:${hh}%">${c}</div>`});
     h+='</div>';b.innerHTML=h;
-    const filled=S.photos.filter(p=>p!==null).length;$('shoot-progress').textContent=`${filled}/${S.max}`;$('btn-to-emoji').style.display=filled>=S.max?'flex':'none';
+    const filled=S.photos.filter(p=>p!==null).length;$('shoot-progress').textContent=`${filled}/${S.max}`;$('btn-to-filter').style.display=filled>=S.max?'flex':'none';
 }
 let _retakeI=null;function confirmRetake(i){_retakeI=i;const rm=$('retake-modal');rm.style.display='flex';const prevEl=$('retake-preview');if(prevEl&&S.photoUrls[i])prevEl.innerHTML=`<img src="${S.photoUrls[i]}" style="width:120px;height:auto;border-radius:10px;border:2px solid #eee;margin-bottom:0.5rem">`;else if(prevEl)prevEl.innerHTML='';$('btn-confirm-retake').onclick=()=>{rm.style.display='none';retakeSlot(_retakeI)};}
-function retakeSlot(i){if(!S.photos[i])return;S.photos[i]=null;S.liveClips[i]=null;if(i<S.slot)S.slot=i;$('btn-to-emoji').style.display='none';updateShootPrev();updateCropGuide();showTapOv()}
+function retakeSlot(i){if(!S.photos[i])return;S.photos[i]=null;S.liveClips[i]=null;if(i<S.slot)S.slot=i;$('btn-to-filter').style.display='none';updateShootPrev();updateCropGuide();showTapOv()}
 function showTapOv(){$('cam-tap').classList.remove('hidden');$('cam-tap-sub').textContent=`Foto ${S.slot+1}/${S.max}`;document.querySelector('.cropGuide').style.display='none'}
 function tapToShoot(){$('cam-tap').classList.add('hidden');document.querySelector('.cropGuide').style.display='block';setTimeout(()=>updateCropGuide(),100);startCountdown()}
 
@@ -277,7 +271,7 @@ async function goToEmoji(){
     stopCam();loader('MENGUNGGAH FOTO...');setProgress(10,'Mengunggah foto...');
     const fd=new FormData();fd.append('frame_id',S.frame.id);fd.append('mirror',S.mirror);
     S.photos.forEach((b,i)=>{if(b)fd.append('photos',b,`photo_${i}.png`)});
-    try{setProgress(40,'Memproses...');const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});if(!r.ok)throw new Error('Upload failed');setProgress(100,'Selesai!');noloader();$('emoji-frame-name').textContent=S.frame.name;$('emoji-photo-total').textContent=S.max+' Photo';renderEmojis();loadEmojiPrev();show('emoji')}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
+    try{setProgress(40,'Memproses...');const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});if(!r.ok)throw new Error('Upload failed');setProgress(100,'Selesai!');noloader();goToFilter();}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
 }
 function renderEmojis(){
     const g=$('emoji-grid2');g.innerHTML='';
@@ -315,9 +309,6 @@ async function goToFilter(){
     $('filter-frame-name').textContent=S.frame.name;
     $('filter-photo-total').textContent=S.max+' Photo';
     $('filter-status').textContent=S.filter;
-    // Copy emoji overlay to filter page
-    const srcOv=$('emoji-overlay'),dstOv=$('filter-emoji-overlay');
-    if(srcOv&&dstOv)dstOv.innerHTML=srcOv.innerHTML;
     renderFilters();show('filter');loadPreview();
 }
 function renderFilters(){
@@ -335,11 +326,9 @@ function loadPreview(){const img=$('prev-img'),sp=$('prev-spin');img.style.opaci
 
 // Finalize
 async function finalizeStrip(){
-    loader('MENCETAK STRIP...');setProgress(5,'Menyiapkan...');const fd=new FormData();fd.append('filter_name',S.filter);
-    // Sticker overlay from emoji
-    setProgress(15,'Membuat stiker...');
-    const ov=$('emoji-overlay');const ems=ov.querySelectorAll('.emojiOverlayItem');
-    if(ems.length>0){const img=$('emoji-prev-img')||$('prev-img');if(img&&img.naturalWidth){const cvs=document.createElement('canvas');cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;const ctx=cvs.getContext('2d');const ir=img.getBoundingClientRect();const rr=img.naturalWidth/img.naturalHeight,dr=ir.width/ir.height;let dw,dh,ox,oy;if(dr>rr){dh=ir.height;dw=dh*rr;ox=(ir.width-dw)/2;oy=0}else{dw=ir.width;dh=dw/rr;ox=0;oy=(ir.height-dh)/2}const sc=img.naturalWidth/dw;ems.forEach(e=>{const ch=e.textContent,er=e.getBoundingClientRect(),pr=ov.getBoundingClientRect(),cx=er.left+er.width/2-pr.left,cy=er.top+er.height/2-pr.top,nx=(cx-ox)*sc,ny=(cy-oy)*sc;const fs=parseFloat(window.getComputedStyle(e).fontSize);const ns=fs*sc;let rot=0;const trans=e.style.transform;if(trans.includes('rotate(')){rot=parseFloat(trans.split('rotate(')[1].split('deg)')[0])*Math.PI/180;}ctx.save();ctx.font=`${ns}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.translate(nx,ny);ctx.rotate(rot);ctx.fillText(ch,0,0);ctx.restore()});const blob=await new Promise(r=>cvs.toBlob(r,'image/png'));fd.append('sticker_overlay',blob,'stickers.png')}}
+    loader('MENCETAK STRIP...');setProgress(5,'Menyiapkan...');
+    const fd=new FormData();fd.append('filter_name',S.filter);
+    
     // Upload live clips
     setProgress(30,'Mengunggah live photo...');
     S.liveClips.forEach((clip,i)=>{if(clip)fd.append('live_clips',clip,`live_${i}.webm`)});
@@ -358,8 +347,6 @@ async function finalizeStrip(){
 function doneToggle(type){
     ['photo','live','gif'].forEach(t=>{$('dt-'+t).classList.toggle('on',t===type)});
     const scr=document.querySelector('.donePhScr');
-    // Clean up old object URLs
-    scr.querySelectorAll('video[src]').forEach(v=>{try{URL.revokeObjectURL(v.src)}catch(_){}});
 
     if(type==='photo'){
         scr.innerHTML=`<img src="${S.stripUrl}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:3px">`;

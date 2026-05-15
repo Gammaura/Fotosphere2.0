@@ -213,7 +213,7 @@
                                 <span class="fInfoTitle" id="shoot-progress">-</span>
                                 <span class="fInfoSub">Completed</span>
                             </div>
-                            <button class="nextBtn" id="btn-to-emoji" onclick="goToEmoji()" style="display:none">Next
+                            <button class="nextBtn" id="btn-to-filter" onclick="goToFilter()" style="display:none">Next
                                 <span class="arrowCircle">›</span></button>
                         </div>
                     </div>
@@ -222,48 +222,11 @@
         </div>
     </section>
 
-    <!-- EMOJI -->
-    <section id="screen-emoji" class="screen">
-        <div class="splitWrap">
-            <div class="timerPill" id="emoji-timer">06.59</div>
-            <div class="splitInner">
-                <div class="splitL">
-                    <div class="bCard">
-                        <div class="bCardHead">ADD EMOJI</div>
-                        <div class="bCardBody">
-                            <div class="emojiGrid" id="emoji-grid2"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="splitR">
-                    <div class="phone">
-                        <div class="phoneScr" id="emoji-prev-body">
-                            <img id="emoji-prev-img" src="" alt="">
-                            <div id="emoji-overlay"
-                                style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
-                        </div>
-                        <div class="phoneFoot">
-                            <div class="fInfoCol">
-                                <span class="fInfoTitle" id="emoji-frame-name">-</span>
-                                <span class="fInfoSub" id="emoji-photo-total">-</span>
-                            </div>
-                            <div class="fInfoCol highlight">
-                                <span class="fInfoTitle" id="emoji-status">Original</span>
-                                <span class="fInfoSub">Emoji</span>
-                            </div>
-                            <button class="nextBtn" onclick="goToFilter()">Next <span
-                                    class="arrowCircle">›</span></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- FILTER -->
     <section id="screen-filter" class="screen">
         <div class="splitWrap">
-            <button class="backBtn" onclick="show('emoji')"></button>
+            <button class="backBtn" onclick="show('shoot')"></button>
             <div class="timerPill" id="filter-timer">06.59</div>
             <div class="splitInner">
                 <div class="splitL">
@@ -373,7 +336,7 @@
             <div id="prog-title" style="font-weight: 800; font-size: 1.2rem; margin-bottom: 1rem;">Uploading...</div>
             <div id="prog-sub" style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">Memproses...</div>
             <div style="width: 100%; background: #fff; height: 16px; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; border: 2px solid #1a1a1a;">
-                <div id="prog-bar" style="width: 0%; height: 100%; background: #ffb6c1; transition: width 0.3s;"></div>
+                <div id="prog-bar" style="width: 0%; height: 100%; background: #e91e63; transition: width 0.3s;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: bold; color: #888; margin-bottom: 1.5rem;">
                 <span id="prog-left">0/0</span>
