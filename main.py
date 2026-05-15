@@ -1,16 +1,26 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Depends, status
 from fastapi.responses import JSONResponse, Response, FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import uvicorn
 import uuid
 import io
 import os
+import re
+import gc
 import base64
 import qrcode
 import json
 import secrets
+import socket
+import string
+import random
+import threading
+import time
+import urllib.parse
+import dotenv
 from typing import List, Optional
 from datetime import datetime
 from PIL import Image
@@ -21,6 +31,7 @@ from db import (
     get_session, get_all_sessions,
     # Frames
     db_upsert_frame, db_delete_frame, storage_upload_frame,
+    db_upsert_custom_frame, db_delete_custom_frame, storage_upload_custom_frame,
     sync_frames_to_local, upload_local_frames_to_supabase,
     # Vouchers
     db_upsert_voucher, db_update_voucher_uses, db_delete_voucher,
@@ -31,6 +42,7 @@ from db import (
     # Payments & Photos
     db_insert_payment, db_update_payment_status, db_get_all_payments,
     db_get_photo_history,
+    upload_local_payments_to_supabase,
 )
 from utils import (
     FILTERS, scan_frames_dir, get_frame_slots,
@@ -38,6 +50,7 @@ from utils import (
 )
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,6 +62,10 @@ app.add_middleware(
 os.makedirs("static", exist_ok=True)
 os.makedirs("static/assets", exist_ok=True)
 os.makedirs("static/frames", exist_ok=True)
+os.makedirs("static/custom_frames", exist_ok=True)
+
+# ── App Configuration ─────────────────────────────────────
+QRIS_PRICE = int(os.environ.get("QRIS_PRICE", "30000"))
 
 # In-memory stores (ephemeral — session photos only)
 SESSION_STORE = {} # session_id -> {"photos": [], "timestamp": datetime, ...}
@@ -57,8 +74,35 @@ SESSION_STORE = {} # session_id -> {"photos": [], "timestamp": datetime, ...}
 VOUCHER_CODES = {}  # code -> {uses_left, created_at, custom_frame}
 TICKET_CODES = {}   # code -> {uses_left, created_at, custom_frame}
 
-import threading
-import time
+# ── Secure Admin Token Store ──────────────────────────────
+# Tokens are generated per login session — no more hardcoded secrets
+ADMIN_TOKENS = set()  # set of valid token strings
+
+def require_admin(request: Request):
+    """FastAPI dependency: verify admin cookie token."""
+    token = request.cookies.get("admin_token")
+    if not token or token not in ADMIN_TOKENS:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return token
+
+# ── Helper: find frame data across public + custom dirs ───
+def find_frame_data(frame_id: str) -> dict | None:
+    """Look up a frame by filename across public and custom frame directories."""
+    all_frames = get_frames() + scan_frames_dir("static/custom_frames")
+    frame_data = next((f for f in all_frames if f["id"] == frame_id), None)
+    if frame_data:
+        thumb_prefix = "/custom_frames/" if frame_data.get("is_private") else "/frames/"
+        return {
+            "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
+            "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
+            "slots": frame_data["slots"], "thumb": f"{thumb_prefix}{frame_data['file']}"
+        }
+    return None
+
+# ── Atomic lock for voucher/ticket claims ─────────────────
+_claim_lock = threading.Lock()
+
+# (threading and time already imported at top)
 
 def cleanup_sessions_task():
     """Periodically clear old sessions from memory."""
@@ -132,7 +176,6 @@ def startup_sync():
         print(f"Ticket load error: {e}")
 
     # 4. Payments: migrate local JSON if exists
-    from db import upload_local_payments_to_supabase
     local_payment_file = "static/payments.json"
     if os.path.exists(local_payment_file):
         try:
@@ -151,6 +194,46 @@ startup_sync()
 
 def get_frames():
     return scan_frames_dir("static/frames")
+
+# ── Frame thumbnail cache (in-memory, small JPEGs) ───────
+_thumb_cache = {}  # filename -> (mtime, jpeg_bytes)
+THUMB_SIZE = 200   # max width in px
+
+@app.get("/api/frames/thumb/{filename}")
+def api_frame_thumb(filename: str):
+    """Return a small JPEG thumbnail of a frame (cached in memory)."""
+    # Search in both directories
+    for d in ["static/frames", "static/custom_frames"]:
+        path = os.path.join(d, filename)
+        if os.path.exists(path):
+            mtime = os.path.getmtime(path)
+            cached = _thumb_cache.get(filename)
+            if cached and cached[0] == mtime:
+                return Response(content=cached[1], media_type="image/jpeg",
+                                headers={"Cache-Control": "public, max-age=86400"})
+            # Generate thumbnail
+            try:
+                img = Image.open(path)
+                ratio = THUMB_SIZE / img.width
+                new_h = int(img.height * ratio)
+                img = img.resize((THUMB_SIZE, new_h), Image.LANCZOS)
+                # Flatten transparency to white for JPEG
+                if img.mode in ("RGBA", "LA", "P"):
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    if img.mode == "P":
+                        img = img.convert("RGBA")
+                    bg.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+                    img = bg
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=70)
+                thumb_bytes = buf.getvalue()
+                _thumb_cache[filename] = (mtime, thumb_bytes)
+                return Response(content=thumb_bytes, media_type="image/jpeg",
+                                headers={"Cache-Control": "public, max-age=86400"})
+            except Exception as e:
+                print(f"Thumb generation error for {filename}: {e}")
+                break
+    raise HTTPException(status_code=404, detail="Frame not found")
 
 def make_qr_b64(url: str) -> str:
     qr = qrcode.QRCode(version=2, box_size=8, border=2,
@@ -206,13 +289,13 @@ def api_create_payment():
     session_id = str(uuid.uuid4())
     order_id = generate_order_id()
     try:
-        payment = create_payment(order_id, amount=30000)
+        payment = create_payment(order_id, amount=QRIS_PRICE)
         create_session(session_id, order_id)
         SESSION_STORE[session_id] = {
             "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
             "created_at": datetime.utcnow()
         }
-        db_insert_payment(order_id, session_id, 30000, "QRIS", "pending")
+        db_insert_payment(order_id, session_id, QRIS_PRICE, "QRIS", "pending")
         return {
             "session_id": session_id,
             "order_id": order_id,
@@ -286,11 +369,13 @@ def api_get_config():
                 "id": f["id"], "name": f["name"], "photos": f["photos"],
                 "layout": f["layout"], "width": f["width"], "height": f["height"],
                 "slots": f["slots"], "thumb": f"/frames/{f['file']}",
+                "file": f["file"],
                 "category": f.get("category", "Other")
             })
     return {
         "frames": public_frames,
-        "filters": [{"id": k, "name": k} for k in FILTERS.keys()]
+        "filters": [{"id": k, "name": k} for k in FILTERS.keys()],
+        "qris_price": QRIS_PRICE,
     }
 
 # ─── VOUCHER ──────────────────────────────────────────────
@@ -300,83 +385,65 @@ async def api_claim_voucher(request: Request):
     try:
         body = await request.json()
         code = body.get("code", "").strip().upper()
-        if code in VOUCHER_CODES:
-            v = VOUCHER_CODES[code]
-            if v.get("uses_left", 0) > 0:
-                session_id = str(uuid.uuid4())
-                order_id = f"VOUCHER-{code}"
-                
-                # Try create session in DB first
-                try:
-                    create_session(session_id, order_id)
-                except Exception as db_err:
-                    print(f"DB Error creating session: {db_err}")
-                    return {"valid": False, "error": f"Database error: {str(db_err)}"}
-                
-                # Only decrease count if DB creation succeeded
-                v["uses_left"] -= 1
-                db_update_voucher_uses(code, v["uses_left"])
-                
-                SESSION_STORE[session_id] = {
-                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
-                    "created_at": datetime.utcnow()
-                }
-                db_insert_payment(order_id, session_id, 0, "Voucher", "paid")
-                result = {"valid": True, "session_id": session_id}
-                # If voucher has custom frame linked
-                if v.get("custom_frame"):
-                    custom_frame_id = v["custom_frame"]
-                    frames = get_frames()
-                    from utils import scan_frames_dir
-                    custom_frames_data = scan_frames_dir("static/custom_frames")
-                    all_frames = frames + custom_frames_data
-                    frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
-                    if frame_data:
-                        result["custom_frame_data"] = {
-                            "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
-                            "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
-                            "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
-                        }
-                return result
-                
-        # Fallback: Check if they typed a ticket code in the voucher menu
-        if code in TICKET_CODES:
-            t = TICKET_CODES[code]
-            if t.get("uses_left", 0) > 0:
-                session_id = str(uuid.uuid4())
-                order_id = f"TICKET-{code}"
-                try:
-                    create_session(session_id, order_id)
-                except Exception as db_err:
-                    return {"valid": False, "error": f"Database error: {str(db_err)}"}
-                t["uses_left"] -= 1
-                from db import db_update_ticket_uses
-                db_update_ticket_uses(code, t["uses_left"])
-                SESSION_STORE[session_id] = {
-                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
-                    "created_at": datetime.utcnow()
-                }
-                db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
-                result = {"valid": True, "session_id": session_id}
-                if t.get("custom_frame"):
-                    custom_frame_id = t["custom_frame"]
-                    frames = get_frames()
-                    from utils import scan_frames_dir
-                    custom_frames_data = scan_frames_dir("static/custom_frames")
-                    all_frames = frames + custom_frames_data
-                    frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
-                    if frame_data:
-                        result["custom_frame_data"] = {
-                            "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
-                            "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
-                            "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
-                        }
-                return result
-                
-        return {"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}
+
+        with _claim_lock:
+            if code in VOUCHER_CODES:
+                v = VOUCHER_CODES[code]
+                if v.get("uses_left", 0) > 0:
+                    session_id = str(uuid.uuid4())
+                    order_id = f"VOUCHER-{code}"
+                    
+                    try:
+                        create_session(session_id, order_id)
+                    except Exception as db_err:
+                        print(f"DB Error creating session: {db_err}")
+                        raise HTTPException(status_code=500, detail=f"Database error: {str(db_err)}")
+                    
+                    v["uses_left"] -= 1
+                    db_update_voucher_uses(code, v["uses_left"])
+                    
+                    SESSION_STORE[session_id] = {
+                        "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                        "created_at": datetime.utcnow()
+                    }
+                    db_insert_payment(order_id, session_id, 0, "Voucher", "paid")
+                    result = {"valid": True, "session_id": session_id}
+                    if v.get("custom_frame"):
+                        fd = find_frame_data(v["custom_frame"])
+                        if fd:
+                            result["custom_frame_data"] = fd
+                    return result
+                    
+            # Fallback: Check if they typed a ticket code in the voucher menu
+            if code in TICKET_CODES:
+                t = TICKET_CODES[code]
+                if t.get("uses_left", 0) > 0:
+                    session_id = str(uuid.uuid4())
+                    order_id = f"TICKET-{code}"
+                    try:
+                        create_session(session_id, order_id)
+                    except Exception as db_err:
+                        raise HTTPException(status_code=500, detail=f"Database error: {str(db_err)}")
+                    t["uses_left"] -= 1
+                    db_update_ticket_uses(code, t["uses_left"])
+                    SESSION_STORE[session_id] = {
+                        "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                        "created_at": datetime.utcnow()
+                    }
+                    db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
+                    result = {"valid": True, "session_id": session_id}
+                    if t.get("custom_frame"):
+                        fd = find_frame_data(t["custom_frame"])
+                        if fd:
+                            result["custom_frame_data"] = fd
+                    return result
+
+        return JSONResponse({"valid": False, "error": "Voucher tidak ditemukan atau sudah habis"}, status_code=404)
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Voucher claim error: {e}")
-        return {"valid": False, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ─── SESSION ──────────────────────────────────────────────
 
@@ -411,14 +478,13 @@ async def api_upload_photos(
         # Pre-generate a 300px base thumbnail for the filter preview to prevent OOM
         frame_path = os.path.join("static/frames", frame_id)
         if os.path.exists(frame_path):
-            from utils import get_frame_slots, composite_photos_on_frame
             photos_pil = [Image.open(io.BytesIO(b)) for b in saved]
             slots = get_frame_slots(frame_path)
             thumb_img = composite_photos_on_frame(frame_path, photos_pil, slots, "Natural", 300)
             buf = io.BytesIO()
             thumb_img.save(buf, format="JPEG", quality=80)
             SESSION_STORE[session_id]["thumb_base"] = buf.getvalue()
-            import gc; del thumb_img; del photos_pil; gc.collect()
+            del thumb_img; del photos_pil; gc.collect()
             
         update_session(session_id, photo_urls=urls, frame_choice=frame_id, mirror=mirror)
         return {"success": True, "uploaded": len(saved)}
@@ -458,7 +524,7 @@ def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int 
     fmt = "JPEG"
     buf = io.BytesIO()
     result.save(buf, format=fmt, quality=90)
-    import gc; del result; del photos_pil; gc.collect()
+    del result; del photos_pil; gc.collect()
     return Response(content=buf.getvalue(), media_type=f"image/{fmt.lower()}")
 
 @app.post("/api/session/{session_id}/finalize")
@@ -485,7 +551,6 @@ async def api_finalize_strip(
     slots = get_frame_slots(frame_path)
     result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name)
 
-    import gc
     if sticker_overlay:
         try:
             overlay_bytes = await sticker_overlay.read()
@@ -554,7 +619,6 @@ async def api_finalize_strip(
         # Generate download URL pointing back to our server
         base = str(request.base_url)
         if "localhost" in base or "127.0.0.1" in base:
-            import socket
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(("8.8.8.8", 80))
@@ -572,13 +636,13 @@ async def api_finalize_strip(
 
 @app.get("/api/download-proxy")
 async def download_proxy(request: Request, url: str, filename: str, inline: bool = False):
-    import requests
+    import requests as _req
     try:
         headers = {}
         if "range" in request.headers:
             headers["Range"] = request.headers["range"]
             
-        r = requests.get(url, headers=headers)
+        r = _req.get(url, headers=headers)
         
         disposition = f"inline; filename={filename}" if inline else f"attachment; filename={filename}"
         resp_headers = {
@@ -625,7 +689,6 @@ def download_page(session_id: str, request: Request):
     n_clips = frame_info["photos"] if frame_info else 6
     live_clip_urls = [f"{base_path}/live_{i}.webm" for i in range(n_clips)] if base_path else []
 
-    import urllib.parse
     def p(u, f): 
         safe_url = urllib.parse.quote(u, safe='')
         return f"/api/download-proxy?url={safe_url}&filename={f}"
@@ -647,8 +710,7 @@ def download_page(session_id: str, request: Request):
             v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
             slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
         
-        import json as _jsn
-        slots_json = _jsn.dumps(frame_info["slots"])
+        slots_json = json.dumps(frame_info["slots"])
         
         live_frame_html = f"""
             <div id="live-section" style="display:none">
@@ -729,57 +791,16 @@ def download_page(session_id: str, request: Request):
             </script>
         """
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Download Foto - Fotosphere</title>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-        <style>
-            :root {{ --pink: #e91e63; --dark: #1a1a1a; --bg: #f8f9fa; }}
-            body {{ font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 20px; }}
-            .container {{ max-width: 500px; margin: 20px auto; background: #fff; border-radius: 32px; padding: 40px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }}
-            .logo {{ font-size: 1.5rem; font-weight: 800; letter-spacing: 4px; color: var(--dark); margin-bottom: 10px; }}
-            .sub {{ color: #666; font-size: 0.9rem; margin-bottom: 30px; }}
-            h2 {{ font-weight: 800; font-size: 1.1rem; margin-top: 40px; margin-bottom: 20px; color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 10px; }}
-            h2::before, h2::after {{ content: ''; flex: 1; height: 1px; background: #eee; }}
-            img, video {{ max-width: 100%; border-radius: 16px; margin-bottom: 20px; background: #fdfdfd; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }}
-            .btn {{ display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--dark); color: #fff; padding: 18px; border-radius: 20px; text-decoration: none; font-weight: 700; transition: 0.2s; margin-bottom: 15px; border: none; width: 100%; box-sizing: border-box; }}
-            .btn-pink {{ background: var(--pink); }}
-            .btn:active {{ transform: scale(0.96); opacity: 0.9; }}
-            .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
-            .live-badge {{ display: inline-block; background: #fff; border: 1px solid var(--pink); color: var(--pink); padding: 4px 10px; border-radius: 50px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; vertical-align: middle; }}
-            .footer {{ margin-top: 40px; font-size: 0.7rem; color: #999; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">FOTOSPHERE</div>
-            <div class="sub">Terima kasih telah berfoto! ✨</div>
-            
-            <h2>📸 HASIL STRIP</h2>
-            <img src="{strip_url}" alt="Strip">
-            <a href="{p(strip_url, 'fotosphere_strip.png')}" download="fotosphere_strip.png" class="btn btn-pink">UNDUH HASIL STRIP</a>
-
-            {live_frame_html}
-
-            <h2>✨ GIF <span class="live-badge">Bergerak</span></h2>
-            <img src="{gif_url}" alt="GIF">
-            <a href="{p(gif_url, 'fotosphere_live.gif')}" download="fotosphere_live.gif" class="btn">UNDUH GIF</a>
-
-            <h2>🎞️ FOTO ORIGINAL</h2>
-            <div class="grid">
-                {"".join([f'<div><img src="{u}" alt="Photo {i+1}"><a href="{p(u, f"foto_{i+1}.png")}" download="foto_{i+1}.png" class="btn" style="padding: 12px; font-size: 0.8rem;">FOTO {i+1}</a></div>' for i, u in enumerate(photo_urls)])}
-            </div>
-            
-            <div class="footer">FOTOSPHERE © 2026 • self-photobox system</div>
-        </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    return templates.TemplateResponse("download.html", {
+        "request": request,
+        "strip_url": strip_url,
+        "gif_url": gif_url,
+        "photo_urls": photo_urls,
+        "live_urls": live_clip_urls,
+        "live_frame_html": live_frame_html,
+        "p": p,
+        "request_url": str(request.url)
+    })
 
 # ═══════════════════════════════════════════════════════════
 # ADMIN PANEL
@@ -793,27 +814,33 @@ def admin_login_page():
 def api_admin_login(username: str = Form(...), password: str = Form(...)):
     admin_password = os.environ.get("ADMIN_PASSWORD", "fotosphere")
     if username == "admin" and password == admin_password:
+        # Generate a cryptographically secure random token per login
+        token = secrets.token_urlsafe(32)
+        ADMIN_TOKENS.add(token)
         response = JSONResponse({"success": True})
-        response.set_cookie(key="admin_token", value="super_secret_fotosphere_token", httponly=True)
+        response.set_cookie(key="admin_token", value=token, httponly=True, samesite="lax")
         return response
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@app.post("/api/admin/change_password")
-def api_admin_change_password(request: Request, new_password: str = Form(...)):
+@app.post("/api/admin/logout")
+def api_admin_logout(request: Request):
     token = request.cookies.get("admin_token")
-    if token != "super_secret_fotosphere_token":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    
-    import dotenv
-    env_file = ".env"
-    dotenv.set_key(env_file, "ADMIN_PASSWORD", new_password)
+    if token and token in ADMIN_TOKENS:
+        ADMIN_TOKENS.discard(token)
+    response = JSONResponse({"success": True})
+    response.delete_cookie("admin_token")
+    return response
+
+@app.post("/api/admin/change_password")
+def api_admin_change_password(request: Request, new_password: str = Form(...), _=Depends(require_admin)):
+    dotenv.set_key(".env", "ADMIN_PASSWORD", new_password)
     os.environ["ADMIN_PASSWORD"] = new_password
     return {"success": True}
 
 @app.get("/admin")
 def admin_page(request: Request):
     token = request.cookies.get("admin_token")
-    if token != "super_secret_fotosphere_token":
+    if not token or token not in ADMIN_TOKENS:
         return HTMLResponse("<script>window.location.href='/admin/login'</script>")
     return FileResponse("private_admin.html")
 
@@ -823,47 +850,41 @@ def admin_page(request: Request):
 async def api_validate_ticket(request: Request):
     body = await request.json()
     code = body.get("code", "").strip().upper()
-    if code in TICKET_CODES:
-        t = TICKET_CODES[code]
-        if t.get("uses_left", 0) > 0:
-            t["uses_left"] -= 1
-            db_update_ticket_uses(code, t["uses_left"])
-            session_id = str(uuid.uuid4())
-            order_id = f"TICKET-{code}"
-            try:
-                create_session(session_id, order_id)
-            except Exception as e:
-                print(f"DB Error creating ticket session: {e}")
-            SESSION_STORE[session_id] = {
-                "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
-                "created_at": datetime.utcnow()
-            }
-            db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
-            result = {"valid": True, "session_id": session_id}
-            
-            # If ticket has a custom frame, return FULL frame data so frontend can use it directly
-            if t.get("custom_frame"):
-                custom_frame_id = t["custom_frame"]
-                # Scan both public and custom frames to find it
-                frames = get_frames()
-                # Include custom frames scan here to find the frame data
-                from utils import scan_frames_dir
-                custom_frames_data = scan_frames_dir("static/custom_frames")
-                all_frames = frames + custom_frames_data
-                frame_data = next((f for f in all_frames if f["id"] == custom_frame_id), None)
-                if frame_data:
-                    result["custom_frame_data"] = {
-                        "id": frame_data["id"], "name": frame_data["name"], "photos": frame_data["photos"],
-                        "layout": frame_data["layout"], "width": frame_data["width"], "height": frame_data["height"],
-                        "slots": frame_data["slots"], "thumb": f"/custom_frames/{frame_data['file']}" if frame_data.get("is_private") else f"/frames/{frame_data['file']}"
-                    }
-            return result
-    return {"valid": False}
+
+    with _claim_lock:
+        if code in TICKET_CODES:
+            t = TICKET_CODES[code]
+            if t.get("uses_left", 0) > 0:
+                session_id = str(uuid.uuid4())
+                order_id = f"TICKET-{code}"
+                try:
+                    create_session(session_id, order_id)
+                except Exception as e:
+                    print(f"DB Error creating ticket session: {e}")
+                    raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+                
+                # Decrement only after DB success
+                t["uses_left"] -= 1
+                db_update_ticket_uses(code, t["uses_left"])
+                
+                SESSION_STORE[session_id] = {
+                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                    "created_at": datetime.utcnow()
+                }
+                db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
+                result = {"valid": True, "session_id": session_id}
+                
+                if t.get("custom_frame"):
+                    fd = find_frame_data(t["custom_frame"])
+                    if fd:
+                        result["custom_frame_data"] = fd
+                return result
+
+    return JSONResponse({"valid": False, "error": "Tiket tidak ditemukan atau sudah habis"}, status_code=404)
 
 # ─── ADMIN: FRAMES ───
 @app.get("/api/admin/frames")
-def admin_list_frames():
-    from utils import scan_frames_dir
+def admin_list_frames(_=Depends(require_admin)):
     public_f = scan_frames_dir("static/frames")
     custom_f = scan_frames_dir("static/custom_frames")
     return public_f + custom_f
@@ -875,7 +896,8 @@ async def admin_upload_frame(
     name: str = Form(None),
     is_private: str = Form("false"),
     whatsapp: str = Form(None),
-    category: str = Form("Other")
+    category: str = Form("Other"),
+    _=Depends(require_admin)
 ):
     if not frame.filename.lower().endswith(".png"):
         raise HTTPException(400, "Only PNG files allowed")
@@ -883,7 +905,6 @@ async def admin_upload_frame(
 
     # Use custom name for filename, or original
     if name:
-        import re
         safe = re.sub(r'[^a-zA-Z0-9_\- ]', '', name).strip().replace(' ', '_').lower()
         fname = safe + ".png"
     else:
@@ -923,34 +944,30 @@ async def admin_upload_frame(
     ticket_code = None
     wa_link = None
     if is_private_bool:
-        import string, random
         chars = string.ascii_uppercase + string.digits
         ticket_code = ''.join(random.choice(chars) for _ in range(6))
         
         # Save ticket
         TICKET_CODES[ticket_code] = {"uses_left": 1, "created_at": datetime.utcnow().isoformat(), "custom_frame": fname}
-        from db import db_upsert_ticket
         db_upsert_ticket(ticket_code, 1, fname)
         
         if whatsapp:
-            # Get actual base url from request
             base = str(request.base_url)
-            
-            # Format phone number for wa.me
             wa_num = whatsapp.strip()
             if wa_num.startswith('0'):
                 wa_num = '62' + wa_num[1:]
-            
-            # WhatsApp text with ticket code
             qr_url = f"{base}api/qr/{ticket_code}"
             text = f"Halo! Ini akses eksklusif Photobooth kamu.%0A%0ABuka link di bawah ini untuk melihat *Barcode Tiket* yang bisa di-scan ke kamera photobooth:%0A{qr_url}%0A%0A(Atau kamu juga bisa mengetik kodenya manual di menu Voucher: *{ticket_code}*)%0A%0ASelamat berfoto!"
             wa_link = f"https://wa.me/{wa_num}?text={text}"
 
     # Upload to Supabase Storage + DB
     try:
-        from db import storage_upload_frame, db_upsert_frame
-        storage_url = storage_upload_frame(fname, content)
-        db_upsert_frame(fname, display, slots, storage_url)
+        if is_private_bool:
+            storage_url = storage_upload_custom_frame(fname, content)
+            db_upsert_custom_frame(fname, display, slots, storage_url)
+        else:
+            storage_url = storage_upload_frame(fname, content)
+            db_upsert_frame(fname, display, slots, storage_url)
     except Exception as e:
         print(f"Supabase upload warning: {e}")
 
@@ -965,7 +982,7 @@ async def admin_upload_frame(
 
 
 @app.delete("/api/admin/frames/{filename}")
-def admin_delete_frame(filename: str):
+def admin_delete_frame(filename: str, _=Depends(require_admin)):
     # Try deleting from both directories
     for t_dir in ["static/frames", "static/custom_frames"]:
         path = os.path.join(t_dir, filename)
@@ -974,32 +991,32 @@ def admin_delete_frame(filename: str):
             json_path = os.path.splitext(path)[0] + ".json"
             if os.path.exists(json_path):
                 os.remove(json_path)
-    # Delete from Supabase
+    # Delete from Supabase (both tables just to be sure)
     try:
         db_delete_frame(filename)
+        db_delete_custom_frame(filename)
     except Exception as e:
         print(f"Supabase frame delete error: {e}")
     return {"success": True}
 
 # ─── ADMIN: PAYMENTS & PHOTOS ───
 @app.get("/api/admin/payments")
-def admin_payments():
+def admin_payments(_=Depends(require_admin)):
     return db_get_all_payments(500)
 
 @app.get("/api/admin/photos")
-def admin_photos(sync: bool = False):
+def admin_photos(sync: bool = False, _=Depends(require_admin)):
     return db_get_photo_history(100)
 
 # ─── ADMIN: VOUCHERS ───
 @app.get("/api/admin/vouchers")
-def admin_vouchers():
-    # Return fresh from DB
+def admin_vouchers(_=Depends(require_admin)):
     global VOUCHER_CODES
     VOUCHER_CODES = sync_vouchers_from_db()
     return VOUCHER_CODES
 
 @app.post("/api/admin/vouchers")
-async def admin_create_voucher(request: Request):
+async def admin_create_voucher(request: Request, _=Depends(require_admin)):
     body = await request.json()
     code = body.get("code", "").strip().upper()
     uses = body.get("uses", 1)
@@ -1011,9 +1028,8 @@ async def admin_create_voucher(request: Request):
     return {"success": True, "code": code, "uses": uses}
 
 @app.post("/api/admin/vouchers/generate")
-async def admin_generate_voucher(request: Request):
+async def admin_generate_voucher(request: Request, _=Depends(require_admin)):
     """Generate a unique random voucher code."""
-    import random, string
     body = await request.json()
     uses = body.get("uses", 1)
     custom_frame = body.get("custom_frame") or None
@@ -1026,7 +1042,7 @@ async def admin_generate_voucher(request: Request):
     return {"success": True, "code": code, "uses": uses}
 
 @app.delete("/api/admin/vouchers/{code}")
-def admin_delete_voucher(code: str):
+def admin_delete_voucher(code: str, _=Depends(require_admin)):
     code = code.upper()
     if code in VOUCHER_CODES:
         del VOUCHER_CODES[code]
@@ -1035,13 +1051,13 @@ def admin_delete_voucher(code: str):
 
 # ─── ADMIN: TICKETS ───
 @app.get("/api/admin/tickets")
-def admin_tickets():
+def admin_tickets(_=Depends(require_admin)):
     global TICKET_CODES
     TICKET_CODES = sync_tickets_from_db()
     return TICKET_CODES
 
 @app.post("/api/admin/tickets")
-async def admin_create_ticket(request: Request):
+async def admin_create_ticket(request: Request, _=Depends(require_admin)):
     body = await request.json()
     code = body.get("code", "").strip().upper()
     uses = body.get("uses", 1)
@@ -1053,8 +1069,7 @@ async def admin_create_ticket(request: Request):
     return {"success": True, "code": code, "uses": uses}
 
 @app.post("/api/admin/tickets/generate")
-async def admin_generate_ticket(request: Request):
-    import random, string
+async def admin_generate_ticket(request: Request, _=Depends(require_admin)):
     body = await request.json()
     uses = body.get("uses", 1)
     custom_frame = body.get("custom_frame") or None
@@ -1067,7 +1082,7 @@ async def admin_generate_ticket(request: Request):
     return {"success": True, "code": code, "uses": uses}
 
 @app.delete("/api/admin/tickets/{code}")
-def admin_delete_ticket(code: str):
+def admin_delete_ticket(code: str, _=Depends(require_admin)):
     code = code.upper()
     if code in TICKET_CODES:
         del TICKET_CODES[code]
@@ -1075,9 +1090,6 @@ def admin_delete_ticket(code: str):
     return {"success": True}
 
 # Serve static (LAST)
-import os
-os.makedirs("static/frames", exist_ok=True)
-os.makedirs("static/custom_frames", exist_ok=True)
 app.mount("/custom_frames", StaticFiles(directory="static/custom_frames"), name="custom_frames")
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 

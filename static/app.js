@@ -3,21 +3,29 @@
 (function(){const h=(window.innerHeight-80)+'px',w=(window.innerWidth-80)+'px';document.documentElement.style.setProperty('--init-h',h);document.documentElement.style.setProperty('--init-w',w)})();
 function showModal(t,s,i='✨'){document.getElementById('modal-title').innerText=t;document.getElementById('modal-sub').innerText=s;document.getElementById('modal-icon').innerText=i;document.getElementById('overlay-modal').style.display='flex'}
 function hideModal(){document.getElementById('overlay-modal').style.display='none'}
-const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[]};
+const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[],qrisPrice:30000};
+let _idleT=null,_idleLimit=120000; // 2 min idle auto-return
+function resetIdle(){if(_idleT)clearTimeout(_idleT);_idleT=setTimeout(()=>{const cur=document.querySelector('.screen.active');if(cur&&(cur.id==='screen-paymethod'||cur.id==='screen-qris'||cur.id==='screen-voucher'||cur.id==='screen-ticket')){goHome();showModal('Sesi Idle','Kembali ke halaman utama karena tidak ada aktivitas','⏳')}},_idleLimit)}
+['click','touchstart','keydown'].forEach(e=>document.addEventListener(e,resetIdle,{passive:true}));
 const $=id=>document.getElementById(id);
 const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$('screen-'+id).classList.add('active')};
-let _progInt=null;
+let _progInt=null,_progStage=0,_progTarget=0;
 function loader(m){
     const pm=$('progress-modal');
     if(pm){
         $('prog-sub').textContent=m||'MEMPROSES...';$('prog-bar').style.width='0%';
         $('prog-left').textContent='0/100';$('prog-right').textContent='0%';
-        pm.style.display='flex';let p=0;if(_progInt)clearInterval(_progInt);
-        _progInt=setInterval(()=>{p+=Math.random()*15;if(p>90)p=90;$('prog-bar').style.width=p+'%';$('prog-left').textContent=Math.floor(p)+'/100';$('prog-right').textContent=Math.floor(p)+'%';},200);
+        pm.style.display='flex';_progStage=0;_progTarget=0;
+        if(_progInt)clearInterval(_progInt);
+        _progInt=setInterval(()=>{
+            if(_progStage<_progTarget)_progStage+=Math.min(2,_progTarget-_progStage);
+            $('prog-bar').style.width=_progStage+'%';$('prog-left').textContent=Math.floor(_progStage)+'/100';$('prog-right').textContent=Math.floor(_progStage)+'%';
+        },80);
     } else {
         $('loader-msg').textContent=m||'MEMPROSES...';$('loader').style.display='flex';
     }
 }
+function setProgress(pct,msg){_progTarget=Math.min(pct,100);if(msg){const s=$('prog-sub');if(s)s.textContent=msg}}
 function noloader(){
     const pm=$('progress-modal');
     if(pm){
@@ -33,15 +41,16 @@ function vkType(ch){$('voucher-input').value+=ch}
 function vkDel(){$('voucher-input').value=$('voucher-input').value.slice(0,-1)}
 
 // Init
-async function init(){try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;buildCats()}catch(e){console.error(e)}}
+async function init(){try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;if(d.qris_price)S.qrisPrice=d.qris_price;buildCats();updateQrisPrice()}catch(e){console.error(e)}}
+function updateQrisPrice(){const el=document.querySelector('.qrPrice');if(el)el.textContent='Rp. '+S.qrisPrice.toLocaleString('id-ID')}
 function buildCats(){S.categories={};S.frames.forEach(f=>{if(f.is_private)return;let c=f.category||'Other';if(!S.categories[c])S.categories[c]=[];S.categories[c].push(f)})}
 init();
 
 // Timer
 let _sT=null,_sL=600;
-function startTimer(){_sL=600;updT();if(_sT)clearInterval(_sT);_sT=setInterval(()=>{_sL--;updT();if(_sL<=0){clearInterval(_sT);goHome();showModal('Sesi Habis','Mohon lakukan pembayaran kembali','⏳')}},1000)}
+function startTimer(){_sL=600;updT();if(_sT)clearInterval(_sT);_sT=setInterval(()=>{_sL--;updT();if(_sL===120)showModal('⏰ 2 Menit Lagi','Segera selesaikan foto kamu!','⏰');if(_sL===30)showModal('⚠️ 30 Detik!','Cepat cetak foto kamu sekarang!','🔥');if(_sL<=0){clearInterval(_sT);goHome();showModal('Sesi Habis','Mohon lakukan pembayaran kembali','⏳')}},1000)}
 function stopTimer(){if(_sT){clearInterval(_sT);_sT=null}}
-function updT(){const t=`${String(Math.floor(_sL/60)).padStart(2,'0')}.${String(_sL%60).padStart(2,'0')}`;['frame-timer','shoot-timer','emoji-timer','filter-timer'].forEach(id=>{const e=$(id);if(e)e.textContent=t})}
+function updT(){const t=`${String(Math.floor(_sL/60)).padStart(2,'0')}.${String(_sL%60).padStart(2,'0')}`;['frame-timer','shoot-timer','emoji-timer','filter-timer'].forEach(id=>{const e=$(id);if(e){e.textContent=t;e.classList.toggle('danger',_sL<=120)}})}
 
 function goHome(){stopCam();stopTimer();clearPay();stopTicketScan();S.sid=null;S.oid=null;S.frame=null;S.filter='Natural';S.emoji='Original';S.photos=[];S.slot=0;S.liveClips=[];(S.photoUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.photoUrls=[];(S.liveUrls||[]).forEach(u=>{if(u)URL.revokeObjectURL(u)});S.liveUrls=[];const o=$('emoji-overlay');if(o)o.innerHTML='';show('home')}
 function goPaymentMethod(){stopCam();clearPay();show('paymethod')}
@@ -111,7 +120,7 @@ function renderFramePanel(){
     const frames=_activeCat==='all'?S.frames.filter(f=>!f.is_private):(S.categories[_activeCat]||[]);
     let gridH='<div class="frameGrid">';
     if(!frames.length){gridH+='<div class="emptyFrameMsg">Belum ada frame.</div>'}
-    else frames.forEach(f=>{const sel=S.frame&&S.frame.id===f.id;gridH+=`<div class="fc${sel?' sel':''}" onclick="pickFrame('${f.id}')"><div class="fcThumb"><img src="${f.thumb}"></div><div class="fcName">${f.name}</div><div class="fcBadge">${f.photos} Foto</div></div>`});
+    else frames.forEach(f=>{const sel=S.frame&&S.frame.id===f.id;const thumbUrl=`/api/frames/thumb/${f.file||f.id}`;gridH+=`<div class="fc${sel?' sel':''}" onclick="pickFrame('${f.id}')"><div class="fcThumb"><img src="${thumbUrl}" loading="lazy"></div><div class="fcName">${f.name}</div><div class="fcBadge">${f.photos} Foto</div></div>`});
     gridH+='</div>';
 
     body.innerHTML=tabsH+gridH;
@@ -147,7 +156,7 @@ function updateShootPrev(){
     h+='</div>';b.innerHTML=h;
     const filled=S.photos.filter(p=>p!==null).length;$('shoot-progress').textContent=`${filled}/${S.max}`;$('btn-to-emoji').style.display=filled>=S.max?'flex':'none';
 }
-let _retakeI=null;function confirmRetake(i){_retakeI=i;$('retake-modal').style.display='flex';$('btn-confirm-retake').onclick=()=>{$('retake-modal').style.display='none';retakeSlot(_retakeI)};}
+let _retakeI=null;function confirmRetake(i){_retakeI=i;const rm=$('retake-modal');rm.style.display='flex';const prevEl=$('retake-preview');if(prevEl&&S.photoUrls[i])prevEl.innerHTML=`<img src="${S.photoUrls[i]}" style="width:120px;height:auto;border-radius:10px;border:2px solid #eee;margin-bottom:0.5rem">`;else if(prevEl)prevEl.innerHTML='';$('btn-confirm-retake').onclick=()=>{rm.style.display='none';retakeSlot(_retakeI)};}
 function retakeSlot(i){if(!S.photos[i])return;S.photos[i]=null;S.liveClips[i]=null;if(i<S.slot)S.slot=i;$('btn-to-emoji').style.display='none';updateShootPrev();updateCropGuide();showTapOv()}
 function showTapOv(){$('cam-tap').classList.remove('hidden');$('cam-tap-sub').textContent=`Foto ${S.slot+1}/${S.max}`;document.querySelector('.cropGuide').style.display='none'}
 function tapToShoot(){$('cam-tap').classList.add('hidden');document.querySelector('.cropGuide').style.display='block';setTimeout(()=>updateCropGuide(),100);startCountdown()}
@@ -203,16 +212,37 @@ function saveLiveClip(){
     });
 }
 
+// Sound Effects Synthesis
+const _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(){
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+    const osc=_audioCtx.createOscillator(),gain=_audioCtx.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(880,_audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440,_audioCtx.currentTime+0.1);
+    gain.gain.setValueAtTime(0.1,_audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,_audioCtx.currentTime+0.1);
+    osc.connect(gain);gain.connect(_audioCtx.destination);osc.start();osc.stop(_audioCtx.currentTime+0.1);
+}
+function playShutter(){
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+    const osc=_audioCtx.createOscillator(),gain=_audioCtx.createGain();
+    osc.type='square';osc.frequency.setValueAtTime(150,_audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40,_audioCtx.currentTime+0.15);
+    gain.gain.setValueAtTime(0.2,_audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,_audioCtx.currentTime+0.15);
+    osc.connect(gain);gain.connect(_audioCtx.destination);osc.start();osc.stop(_audioCtx.currentTime+0.15);
+}
+
 let _cdI=null;
 function startCountdown(){
     if(_cdI){clearInterval(_cdI);_cdI=null}
     // Start live recording before countdown
     startLiveRec();
     $('cam-cd').style.display='flex';let c=S.timerSec;$('cam-cd-n').textContent=c;
-    _cdI=setInterval(()=>{c--;if(c>0)$('cam-cd-n').textContent=c;else{clearInterval(_cdI);_cdI=null;$('cam-cd').style.display='none';capturePhoto()}},1000);
+    playBeep();
+    _cdI=setInterval(()=>{c--;if(c>0){$('cam-cd-n').textContent=c;playBeep();}else{clearInterval(_cdI);_cdI=null;$('cam-cd').style.display='none';capturePhoto()}},1000);
 }
 
 async function capturePhoto(){
+    playShutter();
     const vid=$('cam-vid'),cvs=$('cam-cvs');cvs.width=vid.videoWidth;cvs.height=vid.videoHeight;
     const ctx=cvs.getContext('2d');ctx.save();if(S.mirror){ctx.translate(cvs.width,0);ctx.scale(-1,1)}ctx.drawImage(vid,0,0);ctx.restore();
     const fl=$('cam-flash');fl.style.transition='none';fl.style.opacity='1';setTimeout(()=>{fl.style.transition='opacity .4s';fl.style.opacity='0'},60);
@@ -244,10 +274,10 @@ async function capturePhoto(){
 const EMOJI_SETS={Original:{c:'✨',l:'Original'},Kitten:{c:'🐱',l:'Kitten'},Flower:{c:'🌸',l:'Flower'},Heart:{c:'💖',l:'Heart'},Star:{c:'⭐',l:'Star'},Bear:{c:'🐻',l:'Bear'},Bunny:{c:'🐰',l:'Bunny'},Butterfly:{c:'🦋',l:'Butterfly'},Cherry:{c:'🍒',l:'Cherry'},Fire:{c:'🔥',l:'Fire'},Rainbow:{c:'🌈',l:'Rainbow'},Crown:{c:'👑',l:'Crown'},Strawberry:{c:'🍓',l:'Strawberry'},Ribbon:{c:'🎀',l:'Ribbon'},Moon:{c:'🌙',l:'Moon'},Sun:{c:'☀️',l:'Sun'},Cloud:{c:'☁️',l:'Cloud'},Leaf:{c:'🍃',l:'Leaf'},Balloon:{c:'🎈',l:'Balloon'},Candy:{c:'🍬',l:'Candy'},Diamond:{c:'💎',l:'Diamond'},Mushroom:{c:'🍄',l:'Mushroom'},Paw:{c:'🐾',l:'Paw'},Sparkle:{c:'✨',l:'Sparkle'}};
 
 async function goToEmoji(){
-    stopCam();loader('MENYIMPAN FOTO...');
+    stopCam();loader('MENGUNGGAH FOTO...');setProgress(10,'Mengunggah foto...');
     const fd=new FormData();fd.append('frame_id',S.frame.id);fd.append('mirror',S.mirror);
     S.photos.forEach((b,i)=>{if(b)fd.append('photos',b,`photo_${i}.png`)});
-    try{const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});if(!r.ok)throw new Error('Upload failed');noloader();$('emoji-frame-name').textContent=S.frame.name;$('emoji-photo-total').textContent=S.max+' Photo';renderEmojis();loadEmojiPrev();show('emoji')}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
+    try{setProgress(40,'Memproses...');const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});if(!r.ok)throw new Error('Upload failed');setProgress(100,'Selesai!');noloader();$('emoji-frame-name').textContent=S.frame.name;$('emoji-photo-total').textContent=S.max+' Photo';renderEmojis();loadEmojiPrev();show('emoji')}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
 }
 function renderEmojis(){
     const g=$('emoji-grid2');g.innerHTML='';
@@ -296,7 +326,7 @@ function renderFilters(){
         if(f.name==='Original')return; // skip Original, use Natural instead
         const d=document.createElement('div');d.className='filterItem'+(S.filter===f.name?' sel':'');d.dataset.name=f.name;
         const thumbUrl=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(f.name)}&thumb=1`;
-        d.innerHTML=`<div class="fltCircle"><img class="fltThumb" src="${thumbUrl}" loading="lazy"></div><div class="fltN">${f.name}</div>`;
+        d.innerHTML=`<div class="fcThumb" style="border-radius:10px"><img class="fltThumb" src="${thumbUrl}" loading="lazy" style="border-radius:10px;object-fit:contain;background:#000"></div><div class="fcName" style="font-size:0.8rem;margin-top:8px">${f.name}</div>`;
         d.onclick=()=>{S.filter=f.name;renderFilters();loadPreview();$('filter-status').textContent=f.name};
         g.appendChild(d);
     });
@@ -305,13 +335,23 @@ function loadPreview(){const img=$('prev-img'),sp=$('prev-spin');img.style.opaci
 
 // Finalize
 async function finalizeStrip(){
-    loader('MENCETAK STRIP...');const fd=new FormData();fd.append('filter_name',S.filter);
+    loader('MENCETAK STRIP...');setProgress(5,'Menyiapkan...');const fd=new FormData();fd.append('filter_name',S.filter);
     // Sticker overlay from emoji
+    setProgress(15,'Membuat stiker...');
     const ov=$('emoji-overlay');const ems=ov.querySelectorAll('.emojiOverlayItem');
     if(ems.length>0){const img=$('emoji-prev-img')||$('prev-img');if(img&&img.naturalWidth){const cvs=document.createElement('canvas');cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;const ctx=cvs.getContext('2d');const ir=img.getBoundingClientRect();const rr=img.naturalWidth/img.naturalHeight,dr=ir.width/ir.height;let dw,dh,ox,oy;if(dr>rr){dh=ir.height;dw=dh*rr;ox=(ir.width-dw)/2;oy=0}else{dw=ir.width;dh=dw/rr;ox=0;oy=(ir.height-dh)/2}const sc=img.naturalWidth/dw;ems.forEach(e=>{const ch=e.textContent,er=e.getBoundingClientRect(),pr=ov.getBoundingClientRect(),cx=er.left+er.width/2-pr.left,cy=er.top+er.height/2-pr.top,nx=(cx-ox)*sc,ny=(cy-oy)*sc;const fs=parseFloat(window.getComputedStyle(e).fontSize);const ns=fs*sc;let rot=0;const trans=e.style.transform;if(trans.includes('rotate(')){rot=parseFloat(trans.split('rotate(')[1].split('deg)')[0])*Math.PI/180;}ctx.save();ctx.font=`${ns}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.translate(nx,ny);ctx.rotate(rot);ctx.fillText(ch,0,0);ctx.restore()});const blob=await new Promise(r=>cvs.toBlob(r,'image/png'));fd.append('sticker_overlay',blob,'stickers.png')}}
     // Upload live clips
+    setProgress(30,'Mengunggah live photo...');
     S.liveClips.forEach((clip,i)=>{if(clip)fd.append('live_clips',clip,`live_${i}.webm`)});
-    try{const r=await fetch(`/api/session/${S.sid}/finalize`,{method:'POST',body:fd});if(!r.ok){const et=await r.text();throw new Error(et||'Finalize failed')}const d=await r.json();S.stripUrl=d.strip_url||'';S.gifUrl=d.gif_url||'';if(d.qr_b64)$('done-qr').innerHTML=`<img src="data:image/png;base64,${d.qr_b64}">`;noloader();stopTimer();show('done');doneToggle('photo')}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
+    try{
+        setProgress(45,'Menggabungkan foto ke frame...');
+        const r=await fetch(`/api/session/${S.sid}/finalize`,{method:'POST',body:fd});
+        setProgress(75,'Membuat GIF animasi...');
+        if(!r.ok){const et=await r.text();throw new Error(et||'Finalize failed')}
+        const d=await r.json();
+        setProgress(95,'Hampir selesai...');
+        S.stripUrl=d.strip_url||'';S.gifUrl=d.gif_url||'';if(d.qr_b64)$('done-qr').innerHTML=`<img src="data:image/png;base64,${d.qr_b64}">`;noloader();stopTimer();show('done');doneToggle('photo')
+    }catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
 }
 
 // Done toggles

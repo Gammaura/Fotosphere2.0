@@ -140,6 +140,29 @@ def db_delete_frame(frame_id: str):
     except Exception as e:
         print(f"Storage delete error: {e}")
 
+# ─── CUSTOM FRAMES ───
+def db_get_all_custom_frames() -> list:
+    sb = get_supabase()
+    try:
+        res = sb.table("custom_frames").select("*").order("created_at").execute()
+        return res.data or []
+    except:
+        return [] # Table might not exist yet
+
+def db_upsert_custom_frame(frame_id: str, display_name: str, slots: list, storage_url: str) -> dict:
+    sb = get_supabase()
+    data = {"id": frame_id, "display_name": display_name, "slots": slots, "storage_url": storage_url}
+    res = sb.table("custom_frames").upsert(data).execute()
+    return res.data[0] if res.data else {}
+
+def db_delete_custom_frame(frame_id: str):
+    sb = get_supabase()
+    sb.table("custom_frames").delete().eq("id", frame_id).execute()
+    try:
+        sb.storage.from_("custom_frames").remove([frame_id])
+    except Exception as e:
+        print(f"Custom storage delete error: {e}")
+
 def storage_upload_frame(filename: str, content: bytes) -> str:
     sb = get_supabase()
     sb.storage.from_("frames").upload(filename, content, {"content-type": "image/png", "upsert": "true"})
@@ -153,18 +176,34 @@ def storage_download_frame(filename: str) -> bytes | None:
         print(f"Frame download error for {filename}: {e}")
         return None
 
-def sync_frames_to_local(frames_dir: str = "static/frames"):
-    """Download all frames from Supabase to local cache."""
+def storage_upload_custom_frame(filename: str, content: bytes) -> str:
+    sb = get_supabase()
+    sb.storage.from_("custom_frames").upload(filename, content, {"content-type": "image/png", "upsert": "true"})
+    return sb.storage.from_("custom_frames").get_public_url(filename)
+
+def storage_download_custom_frame(filename: str) -> bytes | None:
+    sb = get_supabase()
+    try:
+        return sb.storage.from_("custom_frames").download(filename)
+    except Exception as e:
+        print(f"Custom frame download error for {filename}: {e}")
+        return None
+
+def sync_frames_to_local(frames_dir: str = "static/frames", custom_frames_dir: str = "static/custom_frames"):
+    """Download all frames from Supabase to local cache (separated into public and custom)."""
     os.makedirs(frames_dir, exist_ok=True)
+    os.makedirs(custom_frames_dir, exist_ok=True)
     try:
         frames = db_get_all_frames()
+        custom_frames = db_get_all_custom_frames()
         count = 0
+        
+        # 1. Sync public frames
         for frame in frames:
             filename = frame["id"]
             local_path = os.path.join(frames_dir, filename)
             json_path = os.path.splitext(local_path)[0] + ".json"
 
-            # Download PNG if not exists locally
             if not os.path.exists(local_path):
                 content = storage_download_frame(filename)
                 if content:
@@ -172,27 +211,48 @@ def sync_frames_to_local(frames_dir: str = "static/frames"):
                         f.write(content)
                     count += 1
 
-            # Write slot + display_name JSON sidecar
             sidecar = {}
             if os.path.exists(json_path):
                 try:
                     with open(json_path, 'r') as jf:
                         sidecar = json.load(jf)
-                except:
-                    pass
-            if frame.get("slots"):
-                sidecar["slots"] = frame["slots"]
-            if frame.get("display_name"):
-                sidecar["display_name"] = frame["display_name"]
+                except: pass
+            if frame.get("slots"): sidecar["slots"] = frame["slots"]
+            if frame.get("display_name"): sidecar["display_name"] = frame["display_name"]
+            sidecar["is_private"] = False
             with open(json_path, 'w') as jf:
                 json.dump(sidecar, jf, indent=2)
 
-        print(f"Synced {count} new frames from Supabase ({len(frames)} total in DB)")
-        return len(frames)
+        # 2. Sync custom frames
+        for frame in custom_frames:
+            filename = frame["id"]
+            local_path = os.path.join(custom_frames_dir, filename)
+            json_path = os.path.splitext(local_path)[0] + ".json"
+
+            if not os.path.exists(local_path):
+                content = storage_download_custom_frame(filename)
+                if content:
+                    with open(local_path, 'wb') as f:
+                        f.write(content)
+                    count += 1
+
+            sidecar = {}
+            if os.path.exists(json_path):
+                try:
+                    with open(json_path, 'r') as jf:
+                        sidecar = json.load(jf)
+                except: pass
+            if frame.get("slots"): sidecar["slots"] = frame["slots"]
+            if frame.get("display_name"): sidecar["display_name"] = frame["display_name"]
+            sidecar["is_private"] = True
+            with open(json_path, 'w') as jf:
+                json.dump(sidecar, jf, indent=2)
+
+        print(f"Synced {count} new frames from Supabase ({len(frames)} public, {len(custom_frames)} custom)")
+        return len(frames) + len(custom_frames)
     except Exception as e:
         print(f"Frame sync error: {e}")
         return 0
-
 def upload_local_frames_to_supabase(frames_dir: str = "static/frames"):
     """Upload any local frames that aren't yet in Supabase (for initial migration)."""
     try:

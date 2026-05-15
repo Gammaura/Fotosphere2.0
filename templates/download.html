@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Foto - Fotosphere</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --pink: #e91e63; --dark: #1a1a1a; --bg: #f8f9fa; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: 20px auto; background: #fff; border-radius: 32px; padding: 40px 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); text-align: center; border: 1px solid #eee; }
+        .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 4px; color: var(--dark); margin-bottom: 10px; }
+        .sub { color: #666; font-size: 0.9rem; margin-bottom: 30px; }
+        h2 { font-weight: 800; font-size: 1.1rem; margin-top: 40px; margin-bottom: 20px; color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        h2::before, h2::after { content: ''; flex: 1; height: 1px; background: #eee; }
+        img, video { max-width: 100%; border-radius: 16px; margin-bottom: 20px; background: #fdfdfd; box-shadow: 0 10px 20px rgba(0,0,0,0.03); }
+        .btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--dark); color: #fff; padding: 18px; border-radius: 20px; text-decoration: none; font-weight: 700; transition: 0.2s; margin-bottom: 15px; border: none; width: 100%; box-sizing: border-box; cursor: pointer; }
+        .btn-pink { background: var(--pink); }
+        .btn:active { transform: scale(0.96); opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .live-badge { display: inline-block; background: #fff; border: 1px solid var(--pink); color: var(--pink); padding: 4px 10px; border-radius: 50px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; vertical-align: middle; }
+        .footer { margin-top: 40px; font-size: 0.7rem; color: #999; }
+        /* Social share */
+        .social-share { display: flex; gap: 10px; margin-bottom: 30px; }
+        .social-share .btn { flex: 1; padding: 12px; font-size: 0.9rem; }
+        .btn-wa { background: #25D366; }
+        .btn-ig { background: #E1306C; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FOTOSPHERE</div>
+        <div class="sub">Terima kasih telah berfoto! ✨</div>
+        
+        <h2>📸 HASIL STRIP</h2>
+        <img src="{{ strip_url }}" alt="Strip">
+        
+        <div class="social-share">
+            <a href="https://wa.me/?text=Lihat%20foto%20keren%20saya%20dari%20Fotosphere!%20%20{{ request_url }}" target="_blank" class="btn btn-wa">Bagikan ke WhatsApp</a>
+        </div>
+        
+        <a href="{{ p(strip_url, 'fotosphere_strip.png') }}" download="fotosphere_strip.png" class="btn btn-pink">UNDUH HASIL STRIP</a>
+
+        {{ live_frame_html | safe }}
+
+        <h2>✨ GIF <span class="live-badge">Bergerak</span></h2>
+        <img src="{{ gif_url }}" alt="GIF">
+        <a href="{{ p(gif_url, 'fotosphere_live.gif') }}" download="fotosphere_live.gif" class="btn">UNDUH GIF</a>
+
+        <h2>🎞️ FOTO ORIGINAL</h2>
+        <div class="grid">
+            {% for u in photo_urls %}
+                <div>
+                    <img src="{{ u }}" alt="Photo {{ loop.index }}">
+                    <a href="{{ p(u, 'foto_' ~ loop.index ~ '.png') }}" download="foto_{{ loop.index }}.png" class="btn" style="padding: 12px; font-size: 0.8rem;">FOTO {{ loop.index }}</a>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if live_urls %}
+            <h2>🎥 VIDEO LIVE</h2>
+            <div class="grid">
+                {% for u in live_urls %}
+                    <div>
+                        <video src="{{ u }}" autoplay loop muted playsinline></video>
+                        <a href="{{ p(u, 'live_' ~ loop.index ~ '.webm') }}" download="live_{{ loop.index }}.webm" class="btn" style="padding: 12px; font-size: 0.8rem;">VIDEO {{ loop.index }}</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="footer">
+            Fotosphere Photobooth &copy; 2026<br>
+            Berlaku 1x24 Jam
+        </div>
+    </div>
+</body>
+</html>

@@ -8,7 +8,7 @@
     <link rel="icon" href="assets/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=25">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 
@@ -84,8 +84,8 @@
             <button class="backBtn" onclick="goPaymentMethod()"></button>
             <h2 class="pgTitle">PEMBAYARAN QRIS</h2>
             <div class="qrBox" id="qr-box"><span class="qrPh">Memuat...</span></div>
-            <p class="qrPrice">Rp. 2.000</p>
-            <p class="pgDesc">Scan barcode untuk melalukan pembayaran</p>
+            <p class="qrPrice">Rp. 30.000</p>
+            <p class="pgDesc">Scan barcode untuk melakukan pembayaran</p>
         </div>
     </section>
 
@@ -386,6 +386,7 @@
     <div id="retake-modal" class="overlay" style="display:none; z-index: 300;">
         <div class="successCard" style="width: 300px;">
             <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📸</div>
+            <div id="retake-preview"></div>
             <div style="font-weight: 800; font-size: 1.2rem; margin-bottom: 0.5rem;">Retake Foto?</div>
             <div style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">Ingin mengganti foto ini?</div>
             <div style="display: flex; gap: 10px;">
@@ -396,7 +397,7 @@
     </div>
 
     <canvas id="cam-cvs" style="display:none"></canvas>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=20"></script>
 </body>
 
 </html>
