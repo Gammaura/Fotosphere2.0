@@ -307,52 +307,13 @@ async function capturePhoto(){
     },'image/png');
 }
 
-// Emoji
-const EMOJI_SETS={Original:{c:'✨',l:'Original'},Kitten:{c:'🐱',l:'Kitten'},Flower:{c:'🌸',l:'Flower'},Heart:{c:'💖',l:'Heart'},Star:{c:'⭐',l:'Star'},Bear:{c:'🐻',l:'Bear'},Bunny:{c:'🐰',l:'Bunny'},Butterfly:{c:'🦋',l:'Butterfly'},Cherry:{c:'🍒',l:'Cherry'},Fire:{c:'🔥',l:'Fire'},Rainbow:{c:'🌈',l:'Rainbow'},Crown:{c:'👑',l:'Crown'},Strawberry:{c:'🍓',l:'Strawberry'},Ribbon:{c:'🎀',l:'Ribbon'},Moon:{c:'🌙',l:'Moon'},Sun:{c:'☀️',l:'Sun'},Cloud:{c:'☁️',l:'Cloud'},Leaf:{c:'🍃',l:'Leaf'},Balloon:{c:'🎈',l:'Balloon'},Candy:{c:'🍬',l:'Candy'},Diamond:{c:'💎',l:'Diamond'},Mushroom:{c:'🍄',l:'Mushroom'},Paw:{c:'🐾',l:'Paw'},Sparkle:{c:'✨',l:'Sparkle'}};
-
-async function goToEmoji(){
-    stopCam();loader('MENGUNGGAH FOTO...');setProgress(10,'Mengunggah foto...');
-    const fd=new FormData();fd.append('frame_id',S.frame.id);fd.append('mirror',S.mirror);
-    S.photos.forEach((b,i)=>{if(b)fd.append('photos',b,`photo_${i}.png`)});
-    try{setProgress(40,'Memproses...');const r=await fetch(`/api/session/${S.sid}/upload`,{method:'POST',body:fd});if(!r.ok)throw new Error('Upload failed');setProgress(100,'Selesai!');noloader();goToFilter();}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}
-}
-function renderEmojis(){
-    const g=$('emoji-grid2');g.innerHTML='';
-    Object.keys(EMOJI_SETS).forEach(k=>{const e=EMOJI_SETS[k];const sel=S.emoji===k;const d=document.createElement('div');d.className='emojiItem'+(sel?' sel':'');d.innerHTML=`<span class="eChar">${e.c}</span><span class="eName">${e.l}</span>`;d.onclick=()=>{S.emoji=k;renderEmojis();applyEmojiOv();$('emoji-status').textContent=k};g.appendChild(d)});
-}
-function loadEmojiPrev(){$('emoji-prev-img').src=`/api/session/${S.sid}/preview?filter_name=Natural`;applyEmojiOv()}
-function applyEmojiOv(){
-    const ov=$('emoji-overlay');ov.innerHTML='';if(S.emoji==='Original')return;
-    const e=EMOJI_SETS[S.emoji];if(!e)return;
-    // Calculate image bounds within the phoneScr to clip emojis to frame
-    const img=$('emoji-prev-img');const container=$('emoji-prev-body');
-    if(!img||!container)return;
-    const ir=img.getBoundingClientRect(),cr=container.getBoundingClientRect();
-    const offL=ir.left-cr.left,offT=ir.top-cr.top,iW=ir.width,iH=ir.height;
-    if(iW<10||iH<10)return;
-    // Sparsely scatter emojis ONLY on the edges (border) of the frame
-    const numE = 8 + Math.floor(Math.random() * 4); // 8 to 11 emojis
-    for(let i=0; i<numE; i++){
-        const el=document.createElement('span');el.className='emojiOverlayItem';el.textContent=e.c;
-        let px, py;
-        const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-        if (edge === 0) { px = offL + Math.random()*iW; py = offT + Math.random()*(iH*0.12); } 
-        else if (edge === 1) { px = offL + iW - Math.random()*(iW*0.15); py = offT + Math.random()*iH; } 
-        else if (edge === 2) { px = offL + Math.random()*iW; py = offT + iH - Math.random()*(iH*0.12); } 
-        else { px = offL + Math.random()*(iW*0.15); py = offT + Math.random()*iH; }
-
-        const sz=0.6+Math.random()*0.4, rot=Math.random()*60-30;
-        el.style.cssText=`left:${px}px;top:${py}px;font-size:${sz}rem;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${.7+Math.random()*.3};position:absolute`;
-        ov.appendChild(el);
-    }
-}
-
 // Filter
 async function goToFilter(){
+    if(!S.frame) return;
     $('filter-frame-name').textContent=S.frame.name;
     $('filter-photo-total').textContent=S.max+' Photo';
     $('filter-status').textContent=S.filter;
-    renderFilters();show('filter');loadPreview();
+    renderFilters(); show('filter'); loadPreview();
 }
 function renderFilters(){
     const g=$('filter-grid');g.innerHTML='';
@@ -360,12 +321,26 @@ function renderFilters(){
         if(f.name==='Original')return; // skip Original, use Natural instead
         const d=document.createElement('div');d.className='filterItem'+(S.filter===f.name?' sel':'');d.dataset.name=f.name;
         const thumbUrl=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(f.name)}&thumb=1`;
-        d.innerHTML=`<div class="fcThumb" style="border-radius:10px"><img class="fltThumb" src="${thumbUrl}" loading="lazy" style="border-radius:10px;object-fit:contain;background:#000"></div><div class="fcName" style="font-size:0.8rem;margin-top:8px">${f.name}</div>`;
+        d.innerHTML=`<div class="fcThumb"><img class="fltThumb" src="${thumbUrl}" loading="lazy"></div><div class="fcName">${f.name}</div>`;
         d.onclick=()=>{S.filter=f.name;renderFilters();loadPreview();$('filter-status').textContent=f.name};
         g.appendChild(d);
     });
 }
-function loadPreview(){const img=$('prev-img'),sp=$('prev-spin');img.style.opacity='.3';sp.style.display='block';const url=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(S.filter)}`;const t=new Image();t.onload=()=>{img.src=url;img.style.opacity='1';sp.style.display='none'};t.onerror=()=>{sp.style.display='none';img.style.opacity='1'};t.src=url}
+function loadPreview(){
+    const img=$('prev-img'), sp=$('prev-spin');
+    if(!img) return;
+    img.style.opacity='.3'; if(sp) sp.style.display='block';
+    const url=`/api/session/${S.sid}/preview?filter_name=${encodeURIComponent(S.filter)}`;
+    console.log("Loading preview:", url);
+    const t=new Image();
+    t.onload=()=>{img.src=url; img.style.opacity='1'; if(sp) sp.style.display='none'};
+    t.onerror=()=>{
+        console.error("Failed to load preview:", url);
+        if(sp) sp.style.display='none'; img.style.opacity='1';
+        if(S.filter !== 'Natural') { S.filter = 'Natural'; loadPreview(); }
+    };
+    t.src=url;
+}
 
 // Finalize
 async function finalizeStrip(){

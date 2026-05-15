@@ -477,6 +477,9 @@ async def api_upload_photos(
         
         # Pre-generate a 300px base thumbnail for the filter preview to prevent OOM
         frame_path = os.path.join("static/frames", frame_id)
+        if not os.path.exists(frame_path):
+            frame_path = os.path.join("static/custom_frames", frame_id)
+            
         if os.path.exists(frame_path):
             photos_pil = [Image.open(io.BytesIO(b)) for b in saved]
             slots = get_frame_slots(frame_path)
