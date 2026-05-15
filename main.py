@@ -495,40 +495,61 @@ async def api_upload_photos(
         print(f"Update session error: {e}")
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
+def log_debug(msg):
+    with open("static/debug.log", "a") as f:
+        f.write(f"[{datetime.utcnow()}] {msg}\n")
+
 @app.get("/api/session/{session_id}/preview")
 def api_preview_strip(session_id: str, filter_name: str = "Natural", thumb: int = 0):
-    if session_id not in SESSION_STORE or not SESSION_STORE[session_id]["photos"]:
-        raise HTTPException(status_code=404, detail="Not found")
+    if session_id not in SESSION_STORE:
+        log_debug(f"PREVIEW FAIL: session {session_id} not in store")
+        raise HTTPException(status_code=404, detail="Session not in store")
+        
+    if not SESSION_STORE[session_id].get("photos"):
+        log_debug(f"PREVIEW FAIL: session {session_id} has no photos")
+        raise HTTPException(status_code=404, detail="No photos in session")
 
     data = SESSION_STORE[session_id]
     if thumb and "thumb_base" in data:
-        img = Image.open(io.BytesIO(data["thumb_base"])).convert("RGB")
-        if filter_name != "Natural":
-            img = apply_filter(img, filter_name)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=60)
-        return Response(content=buf.getvalue(), media_type="image/jpeg")
+        try:
+            img = Image.open(io.BytesIO(data["thumb_base"])).convert("RGB")
+            if filter_name != "Natural":
+                img = apply_filter(img, filter_name)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=60)
+            return Response(content=buf.getvalue(), media_type="image/jpeg")
+        except Exception as e:
+            log_debug(f"THUMB GEN FAIL: {e}")
 
-    frame_id = data["frame_id"]
+    frame_id = data.get("frame_id")
+    if not frame_id:
+        log_debug(f"PREVIEW FAIL: no frame_id in session {session_id}")
+        raise HTTPException(status_code=400, detail="No frame selected")
+
     # Check both frames and custom_frames directories
     frame_path = os.path.join("static/frames", frame_id)
     if not os.path.exists(frame_path):
         frame_path = os.path.join("static/custom_frames", frame_id)
 
-    if not os.path.exists(frame_path):
+    if not os.path.exists(frame_path) or os.path.isdir(frame_path):
+        log_debug(f"PREVIEW FAIL: frame {frame_id} not found at {frame_path}")
         raise HTTPException(status_code=404, detail="Frame not found")
 
-    photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
-    slots = get_frame_slots(frame_path)
-    
-    # Main preview (thumb=0) is limited to 800px because it's just for the UI
-    result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name, 800)
+    try:
+        photos_pil = [Image.open(io.BytesIO(b)) for b in data["photos"]]
+        slots = get_frame_slots(frame_path)
+        
+        # Main preview (thumb=0) is limited to 800px
+        result = composite_photos_on_frame(frame_path, photos_pil, slots, filter_name, 800)
 
-    fmt = "JPEG"
-    buf = io.BytesIO()
-    result.save(buf, format=fmt, quality=90)
-    del result; del photos_pil; gc.collect()
-    return Response(content=buf.getvalue(), media_type=f"image/{fmt.lower()}")
+        fmt = "JPEG"
+        buf = io.BytesIO()
+        result.save(buf, format=fmt, quality=90)
+        del result; [p.close() for p in photos_pil]; gc.collect()
+        return Response(content=buf.getvalue(), media_type=f"image/{fmt.lower()}")
+    except Exception as e:
+        log_debug(f"COMPOSITE FAIL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/session/{session_id}/finalize")
 async def api_finalize_strip(
