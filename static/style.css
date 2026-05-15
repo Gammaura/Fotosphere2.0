@@ -230,13 +230,13 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 @keyframes ePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* ═══ FILTER ═══ */
-.filterGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;padding:20px;align-content:start}
-.filterItem{background:var(--card);border:2.5px solid transparent;border-radius:15px;padding:12px;text-align:center;transition:all .2s;cursor:pointer}
-.filterItem:hover{transform:translateY(-2px);border-color:#ccc}
-.filterItem.sel{border-color:var(--dark);background:#fff;transform:scale(1.03);box-shadow:0 3px 10px rgba(0,0,0,.08)}
-.filterItem .fcThumb{width:100%;aspect-ratio:9/16;border-radius:10px;overflow:hidden;margin-bottom:8px;background:#111;position:relative}
-.filterItem .fltThumb{width:100%;height:100%;object-fit:contain}
-.filterItem .fcName{font-size:.7rem;font-weight:800;color:var(--dark)}
+.filterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:15px;align-content:start}
+.filterItem{background:var(--card);border:2px solid transparent;border-radius:12px;padding:8px;text-align:center;transition:all .2s;cursor:pointer}
+.filterItem:hover{background:#fefefe;transform:translateY(-1px)}
+.filterItem.sel{border-color:var(--dark);background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.filterItem .fcThumb{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:5px;background:#111;position:relative}
+.filterItem .fltThumb{width:100%;height:100%;object-fit:cover}
+.filterItem .fcName{font-size:.62rem;font-weight:800;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .filterItem.sel .fcName{color:var(--accent)}
 .spin{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--dark);border-radius:50%;animation:sp .7s linear infinite;position:absolute}
 @keyframes sp{to{transform:rotate(360deg)}}
