@@ -410,3 +410,48 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
     padding: 2rem;
   }
 }
+
+/* Category Tabs */
+.catTabs {
+    background: #fdfdfd;
+    border-bottom: 2px solid #f0f0f0;
+    padding: 10px 15px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+}
+.catTabs::-webkit-scrollbar { display: none; }
+.catTabsInner {
+    display: inline-flex;
+    gap: 8px;
+}
+.catTab {
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.catTab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3);
+}
+.catTab:active {
+    transform: scale(0.95);
+}
+
+.emptyFrameMsg {
+    padding: 40px;
+    text-align: center;
+    color: #888;
+    font-weight: 600;
+    font-size: 0.9rem;
+}

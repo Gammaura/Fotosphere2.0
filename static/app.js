@@ -100,13 +100,56 @@ function goVoucher(){show('voucher');$('voucher-input').value=''}
 async function claimVoucher(){const code=$('voucher-input').value.trim();if(!code)return showModal('Perhatian','Masukkan kode voucher','💡');loader('MEMVERIFIKASI...');try{const r=await fetch('/api/voucher/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const d=await r.json();noloader();if(d.valid){S.sid=d.session_id;if(d.custom_frame_data){S.frame=d.custom_frame_data;if(S.frame){S.max=S.frame.photos;showSuccess('Voucher Berhasil','Terima Kasih',{method:'Voucher',order:'VOUCHER-'+code.toUpperCase(),total:'GRATIS'},()=>{startTimer();goToShoot()});return}}showSuccess('Voucher Berhasil','Terima Kasih',{method:'Voucher',order:'VOUCHER-'+code.toUpperCase(),total:'GRATIS'},()=>{startTimer();goToFrame()})}else showModal('Gagal',d.error||'Tidak valid','❌')}catch(e){noloader();showModal('Error',e.message,'⚠️')}}
 
 // Frame select
-async function goToFrame(){loader('MEMUAT FRAME...');try{const r=await fetch('/api/config');const d=await r.json();S.frames=d.frames;S.filters=d.filters;}catch(e){}noloader();if(S.frame&&!S.frames.find(f=>f.id===S.frame.id))S.frame=null;renderFramePanel();updateFPrev();show('frame')}
+let _activeCat = 'all';
+async function goToFrame(){
+    loader('MEMUAT FRAME...');
+    try{
+        const r=await fetch('/api/config');
+        const d=await r.json();
+        S.frames=d.frames;
+        S.filters=d.filters;
+        buildCats();
+    }catch(e){}
+    noloader();
+    _activeCat = 'all';
+    if(S.frame&&!S.frames.find(f=>f.id===S.frame.id))S.frame=null;
+    renderFramePanel();
+    updateFPrev();
+    show('frame');
+}
+
+function buildCats(){
+    S.categories = {};
+    S.frames.forEach(f=>{
+        if(f.is_private) return;
+        const c = f.category || 'Other';
+        if(!S.categories[c]) S.categories[c] = [];
+        S.categories[c].push(f);
+    });
+}
+
+function filterCat(cat){
+    _activeCat = cat;
+    renderFramePanel();
+}
 
 function renderFramePanel(){
-    const body=$('frame-body');body.innerHTML='';
-    const frames=S.frames.filter(f=>!f.is_private);
+    const body=$('frame-body'); body.innerHTML='';
+    const catKeys = Object.keys(S.categories);
+    
+    // Category tabs
+    let tabsH='<div class="catTabs"><div class="catTabsInner">';
+    tabsH+=`<button class="catTab${_activeCat==='all'?' active':''}" onclick="filterCat('all')">SEMUA</button>`;
+    catKeys.forEach(cat=>{
+        tabsH+=`<button class="catTab${_activeCat===cat?' active':''}" onclick="filterCat('${cat}')">${cat}</button>`;
+    });
+    tabsH+='</div></div>';
+
+    // Filtered frames
+    const frames = _activeCat === 'all' ? S.frames.filter(f=>!f.is_private) : (S.categories[_activeCat]||[]);
+    
     let gridH='<div class="frameGrid">';
-    if(!frames.length){gridH+='<div class="emptyFrameMsg">Belum ada frame.</div>'}
+    if(!frames.length){gridH+='<div class="emptyFrameMsg">Belum ada frame di kategori ini.</div>'}
     else frames.forEach(f=>{
         const sel=S.frame&&S.frame.id===f.id;
         const thumbUrl=`/api/frames/thumb/${f.file||f.id}`;
@@ -117,7 +160,7 @@ function renderFramePanel(){
         </div>`
     });
     gridH+='</div>';
-    body.innerHTML=gridH;
+    body.innerHTML = tabsH + gridH;
 }
 function filterCat(cat){_activeCat=cat;renderFramePanel()}
 function pickFrame(id){S.frame=S.frames.find(f=>f.id===id);if(S.frame)S.max=S.frame.photos;renderFramePanel();updateFPrev()}
