@@ -919,39 +919,55 @@ def admin_page(request: Request):
 
 @app.post("/api/ticket/validate")
 async def api_validate_ticket(request: Request):
-    body = await request.json()
-    code = body.get("code", "").strip().upper()
+    try:
+        body = await request.json()
+        code = body.get("code", "").strip().upper()
+        log_debug(f"TICKET VALIDATE: code={code}, codes_in_memory={len(TICKET_CODES)}")
 
-    with _claim_lock:
-        if code in TICKET_CODES:
-            t = TICKET_CODES[code]
-            if t.get("uses_left", 0) > 0:
-                session_id = str(uuid.uuid4())
-                order_id = f"TICKET-{code}"
-                try:
-                    create_session(session_id, order_id)
-                except Exception as e:
-                    print(f"DB Error creating ticket session: {e}")
-                    raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-                
-                # Decrement only after DB success
-                t["uses_left"] -= 1
-                db_update_ticket_uses(code, t["uses_left"])
-                
-                SESSION_STORE[session_id] = {
-                    "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
-                    "created_at": datetime.utcnow()
-                }
-                db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
-                result = {"valid": True, "session_id": session_id}
-                
-                if t.get("custom_frame"):
-                    fd = find_frame_data(t["custom_frame"])
-                    if fd:
-                        result["custom_frame_data"] = fd
-                return result
+        with _claim_lock:
+            if code in TICKET_CODES:
+                t = TICKET_CODES[code]
+                if t.get("uses_left", 0) > 0:
+                    session_id = str(uuid.uuid4())
+                    order_id = f"TICKET-{code}"
+                    try:
+                        create_session(session_id, order_id)
+                    except Exception as e:
+                        log_debug(f"TICKET DB ERROR: {e}")
+                        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+                    
+                    t["uses_left"] -= 1
+                    try:
+                        db_update_ticket_uses(code, t["uses_left"])
+                    except Exception as e:
+                        log_debug(f"TICKET UPDATE USES ERROR: {e}")
+                    
+                    SESSION_STORE[session_id] = {
+                        "order_id": order_id, "photos": [], "frame_id": None, "mirror": False,
+                        "created_at": datetime.utcnow()
+                    }
+                    try:
+                        db_insert_payment(order_id, session_id, 0, "Ticket", "paid")
+                    except Exception as e:
+                        log_debug(f"TICKET PAYMENT INSERT ERROR: {e}")
+                    
+                    result = {"valid": True, "session_id": session_id}
+                    
+                    if t.get("custom_frame"):
+                        try:
+                            fd = find_frame_data(t["custom_frame"])
+                            if fd:
+                                result["custom_frame_data"] = fd
+                        except Exception as e:
+                            log_debug(f"TICKET FRAME LOOKUP ERROR: {e}")
+                    return result
 
-    return JSONResponse({"valid": False, "error": "Tiket tidak ditemukan atau sudah habis"}, status_code=404)
+        return JSONResponse({"valid": False, "error": "Tiket tidak ditemukan atau sudah habis"}, status_code=404)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_debug(f"TICKET VALIDATE UNHANDLED ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ─── ADMIN: FRAMES ───
 @app.get("/api/admin/frames")
