@@ -1018,13 +1018,6 @@
                                 <label>Jumlah Pakai</label>
                                 <input type="number" id="v-uses" value="1" min="1" style="width:80px">
                             </div>
-                            <div class="field">
-                                <label>Custom Frame (opsional)</label>
-                                <select id="v-frame"
-                                    style="padding:.5rem .8rem;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-weight:700;font-size:.82rem">
-                                    <option value="">— Bebas pilih —</option>
-                                </select>
-                            </div>
                             <button class="btn" onclick="createVoucher()">+ Tambah</button>
                             <button class="btn btn-green" onclick="generateVoucher()">🎲 Generate Unik</button>
                         </div>
@@ -1281,8 +1274,8 @@
             }
             document.getElementById('panel-' + name).classList.add('act');
             if (name === 'frames' || name === 'custom-frames') { loadFrames(); loadCategories(); }
-            if (name === 'vouchers') { loadVouchers(); populateFrameSelect('v-frame'); }
-            if (name === 'tickets') { loadTickets(); populateFrameSelect('t-frame'); }
+            if (name === 'vouchers') { loadVouchers(); }
+            if (name === 'tickets') { loadTickets(); }
             if (name === 'payments') loadPayments();
             if (name === 'photos') loadPhotos();
         }
@@ -1492,11 +1485,10 @@
         async function createVoucher() {
             const code = document.getElementById('v-code').value.trim();
             const uses = parseInt(document.getElementById('v-uses').value) || 1;
-            const custom_frame = document.getElementById('v-frame').value || null;
             if (!code) return showAdminModal('Peringatan', 'Masukkan kode, atau gunakan tombol Generate Unik', null, '⚠️');
             await fetch('/api/admin/vouchers', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, uses, custom_frame })
+                body: JSON.stringify({ code, uses })
             });
             document.getElementById('v-code').value = '';
             loadVouchers();
@@ -1504,10 +1496,9 @@
 
         async function generateVoucher() {
             const uses = parseInt(document.getElementById('v-uses').value) || 1;
-            const custom_frame = document.getElementById('v-frame').value || null;
             const r = await fetch('/api/admin/vouchers/generate', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uses, custom_frame })
+                body: JSON.stringify({ uses })
             });
             const d = await r.json();
             showAdminModal('Voucher Dibuat!', `Kode: ${d.code}\nPakai: ${d.uses}x`, null, '🎉');
