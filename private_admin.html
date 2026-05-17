@@ -521,74 +521,162 @@
             background: #fafbfd;
         }
 
-        /* ═══ GRID ITEMS ═══ */
-        .frame-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            gap: 1.2rem;
+        /* ═══ FRAME LIST (Row Layout) ═══ */
+        .frame-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
         }
 
-        .frame-item {
-            background: var(--white);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            border: 1px solid var(--border);
-            text-align: center;
-            position: relative;
-            transition: var(--transition);
-        }
-
-        .frame-item:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .frame-item img {
-            width: 100%;
-            aspect-ratio: 9/16;
-            object-fit: cover;
-            background: var(--light);
-        }
-
-        .frame-item-info {
-            padding: 0.8rem;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--dark);
-            border-top: 1px solid var(--border);
-        }
-
-        .frame-item-info span {
-            display: block;
-            font-size: 0.7rem;
-            color: var(--gray-light);
-            font-weight: 500;
-            margin-top: 3px;
-        }
-
-        .frame-item-del {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--white);
-            color: var(--danger);
-            border: 1px solid var(--border);
-            cursor: pointer;
+        .frame-row {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
             transition: var(--transition);
-            box-shadow: var(--shadow-sm);
-            font-size: 0.75rem;
         }
 
-        .frame-item-del:hover {
+        .frame-row:last-child {
+            border-bottom: none;
+        }
+
+        .frame-row:hover {
+            background: #f8f9fc;
+        }
+
+        .frame-row-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--light);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .frame-row-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .frame-row-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .frame-row-meta {
+            font-size: 0.75rem;
+            color: var(--gray-light);
+            margin-top: 2px;
+        }
+
+        .frame-row-cat {
+            flex-shrink: 0;
+            min-width: 80px;
+        }
+
+        .frame-row-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .frame-row-actions .btn-sm {
+            padding: 0.4rem 0.75rem;
+        }
+
+        /* ═══ CONFIRM MODAL ═══ */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .confirm-overlay.show {
+            display: flex;
+        }
+
+        .confirm-box {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .confirm-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .confirm-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 0.4rem;
+        }
+
+        .confirm-text {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .confirm-actions button {
+            flex: 1;
+            padding: 0.7rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+        }
+
+        .confirm-cancel {
+            background: var(--light);
+            color: var(--gray);
+        }
+
+        .confirm-cancel:hover {
+            background: var(--border);
+        }
+
+        .confirm-ok {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .confirm-ok:hover {
+            background: var(--primary-hover);
+        }
+
+        .confirm-ok.danger {
             background: var(--danger);
-            color: var(--white);
-            border-color: var(--danger);
+        }
+
+        .confirm-ok.danger:hover {
+            background: #c0392b;
         }
 
         /* ═══ UTILS ═══ */
@@ -749,30 +837,6 @@
             color: var(--dark);
         }
 
-        .frame-item-edit {
-            position: absolute;
-            top: 8px;
-            right: 42px;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--white);
-            color: var(--primary);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition);
-            box-shadow: var(--shadow-sm);
-            font-size: 0.75rem;
-        }
-
-        .frame-item-edit:hover {
-            background: var(--primary);
-            color: var(--white);
-            border-color: var(--primary);
-        }
 
         .edit-modal-field {
             margin-bottom: 1rem;
@@ -908,7 +972,7 @@
                     </div>
                     <div class="card">
                         <div class="card-title">Frame Umum (Tampil di Publik)</div>
-                        <div class="frame-grid" id="frame-list-public"></div>
+                        <div class="frame-list" id="frame-list-public"></div>
                     </div>
                 </div>
 
@@ -936,7 +1000,7 @@
                     <div class="card">
                         <div class="card-title" style="color: #e65100;">Frame Private / Custom (Hanya via Tiket Khusus)
                         </div>
-                        <div class="frame-grid" id="frame-list-private"></div>
+                        <div class="frame-list" id="frame-list-private"></div>
                     </div>
                 </div>
 
@@ -984,32 +1048,10 @@
                     </div>
                 </div>
 
-                <!-- TICKETS -->
+                <!-- TICKETS (list only, tickets are created via Custom Frame upload) -->
                 <div id="panel-tickets" class="panel">
                     <div class="card">
-                        <div class="card-title">Buat Ticket</div>
-                        <div class="voucher-row">
-                            <div class="field">
-                                <label>Kode Ticket</label>
-                                <input type="text" id="t-code" placeholder="Auto-generate jika kosong"
-                                    style="width:220px">
-                            </div>
-                            <div class="field">
-                                <label>Jumlah Pakai</label>
-                                <input type="number" id="t-uses" value="1" min="1" style="width:80px">
-                            </div>
-                            <div class="field">
-                                <label>Custom Frame (opsional)</label>
-                                <select id="t-frame">
-                                    <option value="">— Bebas pilih —</option>
-                                </select>
-                            </div>
-                            <button class="btn" onclick="createTicket()">+ Tambah</button>
-                            <button class="btn btn-green" onclick="generateTicket()">🎲 Generate Unik</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Daftar Ticket</div>
+                        <div class="card-title">Daftar Ticket <button class="btn btn-sm" onclick="loadTickets()">🔄 Refresh</button></div>
                         <div class="table-wrap">
                             <table>
                                 <thead>
@@ -1027,7 +1069,6 @@
                     </div>
                 </div>
 
-                <!-- PAYMENTS -->
                 <div id="panel-payments" class="panel">
                     <div class="card">
                         <div class="card-title">Riwayat Pembayaran <button class="btn btn-sm"
@@ -1091,8 +1132,21 @@
                 </div>
 
             </div> <!-- end scroll-content -->
-        </div> <!-- end content-area -->
+    </div> <!-- end content-area -->
     </div> <!-- end admin-layout -->
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-overlay" id="confirm-dialog">
+        <div class="confirm-box">
+            <div class="confirm-icon" id="confirm-icon">⚠️</div>
+            <div class="confirm-title" id="confirm-title">Konfirmasi</div>
+            <div class="confirm-text" id="confirm-text">Apakah Anda yakin?</div>
+            <div class="confirm-actions">
+                <button class="confirm-cancel" id="confirm-cancel">Batal</button>
+                <button class="confirm-ok" id="confirm-ok">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Admin Modal -->
     <div class="modal-overlay" id="admin-modal">
@@ -1143,6 +1197,29 @@
     <script>
         let _allFrames = [];
         let _categories = ['Other'];
+
+        // ═══ CONFIRM DIALOG ═══
+        function showConfirm(title, text, { icon = '⚠️', okText = 'Ya, Lanjutkan', okClass = '' } = {}) {
+            return new Promise(resolve => {
+                document.getElementById('confirm-icon').textContent = icon;
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-text').textContent = text;
+                const okBtn = document.getElementById('confirm-ok');
+                okBtn.textContent = okText;
+                okBtn.className = 'confirm-ok' + (okClass ? ' ' + okClass : '');
+                document.getElementById('confirm-dialog').classList.add('show');
+
+                const cancel = () => { cleanup(); resolve(false); };
+                const ok = () => { cleanup(); resolve(true); };
+                const cleanup = () => {
+                    document.getElementById('confirm-dialog').classList.remove('show');
+                    document.getElementById('confirm-cancel').removeEventListener('click', cancel);
+                    okBtn.removeEventListener('click', ok);
+                };
+                document.getElementById('confirm-cancel').addEventListener('click', cancel);
+                okBtn.addEventListener('click', ok);
+            });
+        }
 
         // ═══ CATEGORY HELPERS ═══
         async function loadCategories() {
@@ -1212,11 +1289,13 @@
 
         async function changeAdminPassword() {
             const pwd = document.getElementById('new-password').value;
-            if (!pwd) return alert('Password tidak boleh kosong');
+            if (!pwd) return showAdminModal('Peringatan', 'Password tidak boleh kosong', null, '⚠️');
+            const ok = await showConfirm('Ubah Password', 'Yakin ingin mengubah password admin?', { icon: '🔑', okText: 'Ya, Ubah' });
+            if (!ok) return;
             const fd = new FormData(); fd.append('new_password', pwd);
             const r = await fetch('/api/admin/change_password', { method: 'POST', body: fd });
-            if (r.ok) { alert('Password berhasil diubah!'); document.getElementById('new-password').value = ''; }
-            else { alert('Gagal mengubah password'); }
+            if (r.ok) { showAdminModal('Berhasil', 'Password berhasil diubah!', null, '✅'); document.getElementById('new-password').value = ''; }
+            else { showAdminModal('Gagal', 'Gagal mengubah password', null, '❌'); }
         }
 
         async function populateFrameSelect(selectId) {
@@ -1242,11 +1321,17 @@
             if (!pubFrames.length) { gPub.innerHTML = '<div class="empty">Belum ada frame umum.</div>'; }
             else {
                 gPub.innerHTML = pubFrames.map(f => `
-                    <div class="frame-item">
-                        <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}','${(f.category || 'Other').replace(/'/g, "\\'")}')">✎</button>
-                        <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                        <img src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
-                        <div class="frame-item-info">${f.name} · ${f.photos} foto<br><span style="color:#888;font-size:0.6rem">${f.category || 'Other'}</span></div>
+                    <div class="frame-row">
+                        <img class="frame-row-thumb" src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
+                        <div class="frame-row-info">
+                            <div class="frame-row-name">${f.name}</div>
+                            <div class="frame-row-meta">${f.photos} foto · ${f.file}</div>
+                        </div>
+                        <div class="frame-row-cat"><span class="badge badge-gray">${f.category || 'Other'}</span></div>
+                        <div class="frame-row-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="openEditModal('${f.file}','${f.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}','${(f.category || 'Other').replace(/'/g, "\\'")}')">✎ Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFrame('${f.file}')">✕ Hapus</button>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -1254,11 +1339,17 @@
             if (!privFrames.length) { gPriv.innerHTML = '<div class="empty">Belum ada frame private.</div>'; }
             else {
                 gPriv.innerHTML = privFrames.map(f => `
-                    <div class="frame-item" style="border: 2px solid #ffcc80;">
-                        <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}','${(f.category || 'Other').replace(/'/g, "\\'")}')">✎</button>
-                        <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                        <img src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
-                        <div class="frame-item-info" style="color:#e65100">${f.name} · ${f.photos} foto<br><span style="font-size:0.6rem">🔒 Private</span></div>
+                    <div class="frame-row">
+                        <img class="frame-row-thumb" src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
+                        <div class="frame-row-info">
+                            <div class="frame-row-name" style="color:#e65100">${f.name}</div>
+                            <div class="frame-row-meta">🔒 Private · ${f.photos} foto · ${f.file}</div>
+                        </div>
+                        <div class="frame-row-cat"><span class="badge badge-orange">Private</span></div>
+                        <div class="frame-row-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="openEditModal('${f.file}','${f.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}','${(f.category || 'Other').replace(/'/g, "\\'")}')">✎ Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFrame('${f.file}')">✕ Hapus</button>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -1269,7 +1360,7 @@
             const nameInput = document.getElementById('frame-name');
             const catInput = document.getElementById('frame-category');
 
-            if (!fileInput.files[0]) return alert('Pilih file PNG');
+            if (!fileInput.files[0]) return showAdminModal('Peringatan', 'Pilih file PNG terlebih dahulu', null, '⚠️');
 
             const customName = nameInput.value.trim();
             const category = getCategoryValue('frame-category', 'frame-category-custom');
@@ -1301,7 +1392,7 @@
             const nameInput = document.getElementById('custom-frame-name');
             const waInput = document.getElementById('custom-frame-whatsapp');
 
-            if (!fileInput.files[0]) return alert('Pilih file PNG');
+            if (!fileInput.files[0]) return showAdminModal('Peringatan', 'Pilih file PNG terlebih dahulu', null, '⚠️');
 
             const customName = nameInput.value.trim();
             const fd = new FormData();
@@ -1351,7 +1442,9 @@
             const file = document.getElementById('edit-frame-file').value;
             const name = document.getElementById('edit-frame-name').value.trim();
             const category = getCategoryValue('edit-frame-category', 'edit-frame-category-custom');
-            if (!name) return alert('Nama tidak boleh kosong');
+            if (!name) return showAdminModal('Peringatan', 'Nama frame tidak boleh kosong', null, '⚠️');
+            const ok = await showConfirm('Simpan Perubahan?', 'Yakin ingin menyimpan perubahan pada frame ini?', { icon: '💾', okText: 'Ya, Simpan' });
+            if (!ok) return;
             const r = await fetch('/api/admin/frames/' + file, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, category })
@@ -1362,14 +1455,16 @@
                 _allFrames = [];
                 loadFrames();
             } else {
-                alert('Gagal mengupdate frame');
+                showAdminModal('Gagal', 'Gagal mengupdate frame', null, '❌');
             }
         }
 
         async function deleteFrame(fname) {
-            if (!confirm('Hapus frame ' + fname + '?')) return;
+            const ok = await showConfirm('Hapus Frame?', `Yakin ingin menghapus frame "${fname}"? Tindakan ini tidak bisa dibatalkan.`, { icon: '🗑️', okText: 'Ya, Hapus', okClass: 'danger' });
+            if (!ok) return;
             await fetch('/api/admin/frames/' + fname, { method: 'DELETE' });
             _allFrames = [];
+            showAdminModal('Dihapus', 'Frame berhasil dihapus.', null, '✅');
             loadFrames();
         }
 
@@ -1398,7 +1493,7 @@
             const code = document.getElementById('v-code').value.trim();
             const uses = parseInt(document.getElementById('v-uses').value) || 1;
             const custom_frame = document.getElementById('v-frame').value || null;
-            if (!code) return alert('Masukkan kode, atau gunakan tombol Generate Unik');
+            if (!code) return showAdminModal('Peringatan', 'Masukkan kode, atau gunakan tombol Generate Unik', null, '⚠️');
             await fetch('/api/admin/vouchers', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code, uses, custom_frame })
@@ -1415,13 +1510,15 @@
                 body: JSON.stringify({ uses, custom_frame })
             });
             const d = await r.json();
-            alert(`Voucher berhasil dibuat!\n\nKode: ${d.code}\nPakai: ${d.uses}x`);
+            showAdminModal('Voucher Dibuat!', `Kode: ${d.code}\nPakai: ${d.uses}x`, null, '🎉');
             loadVouchers();
         }
 
         async function deleteVoucher(code) {
-            if (!confirm('Hapus voucher ' + code + '?')) return;
+            const ok = await showConfirm('Hapus Voucher?', `Yakin ingin menghapus voucher "${code}"?`, { icon: '🗑️', okText: 'Ya, Hapus', okClass: 'danger' });
+            if (!ok) return;
             await fetch('/api/admin/vouchers/' + code, { method: 'DELETE' });
+            showAdminModal('Dihapus', 'Voucher berhasil dihapus.', null, '✅');
             loadVouchers();
         }
         // ═══ TICKETS ═══
@@ -1449,7 +1546,7 @@
             const code = document.getElementById('t-code').value.trim();
             const uses = parseInt(document.getElementById('t-uses').value) || 1;
             const custom_frame = document.getElementById('t-frame').value || null;
-            if (!code) return alert('Masukkan kode, atau gunakan tombol Generate Unik');
+            if (!code) return showAdminModal('Peringatan', 'Masukkan kode, atau gunakan tombol Generate Unik', null, '⚠️');
             await fetch('/api/admin/tickets', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code, uses, custom_frame })
@@ -1466,13 +1563,15 @@
                 body: JSON.stringify({ uses, custom_frame })
             });
             const d = await r.json();
-            alert(`Ticket berhasil dibuat!\n\nKode: ${d.code}\nPakai: ${d.uses}x`);
+            showAdminModal('Ticket Dibuat!', `Kode: ${d.code}\nPakai: ${d.uses}x`, null, '🎉');
             loadTickets();
         }
 
         async function deleteTicket(code) {
-            if (!confirm('Hapus ticket ' + code + '?')) return;
+            const ok = await showConfirm('Hapus Ticket?', `Yakin ingin menghapus ticket "${code}"?`, { icon: '🗑️', okText: 'Ya, Hapus', okClass: 'danger' });
+            if (!ok) return;
             await fetch('/api/admin/tickets/' + code, { method: 'DELETE' });
+            showAdminModal('Dihapus', 'Ticket berhasil dihapus.', null, '✅');
             loadTickets();
         }
 
