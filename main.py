@@ -855,6 +855,17 @@ def download_page(session_id: str, request: Request):
                         var cvs=document.createElement('canvas');cvs.width=rw;cvs.height=rh;
                         var ctx=cvs.getContext('2d');
                         var scale_x = rw/{fw}, scale_y = rh/{fh};
+                        // Sample frame's dominant color for background (avoid white gaps)
+                        var bgColor='#1a1a1a';
+                        try {{
+                            var tc=document.createElement('canvas');tc.width=frameImg.naturalWidth||rw;tc.height=frameImg.naturalHeight||rh;
+                            var tctx=tc.getContext('2d');tctx.drawImage(frameImg,0,0,tc.width,tc.height);
+                            var id=tctx.getImageData(0,0,tc.width,tc.height).data;
+                            var rr=0,gg=0,bb=0,cnt=0;
+                            for(var px=0;px<id.length;px+=16){{ if(id[px+3]>200){{ rr+=id[px];gg+=id[px+1];bb+=id[px+2];cnt++; }} }}
+                            if(cnt>0)bgColor='rgb('+Math.round(rr/cnt)+','+Math.round(gg/cnt)+','+Math.round(bb/cnt)+')';
+                        }} catch(ce){{}}
+                        var bleed=15*Math.max(scale_x,scale_y);
                         await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
                         await new Promise(function(r){{setTimeout(r,200);}});
                         var stream=cvs.captureStream(30);
@@ -868,8 +879,8 @@ def download_page(session_id: str, request: Request):
                         var slots={slots_json};
                         function draw(){{
                             if(!recording)return;
-                            ctx.fillStyle='#fff';ctx.fillRect(0,0,cvs.width,cvs.height);
-                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];ctx.drawImage(v,s.x*scale_x,s.y*scale_y,s.w*scale_x,s.h*scale_y);}}}});
+                            ctx.fillStyle=bgColor;ctx.fillRect(0,0,cvs.width,cvs.height);
+                            videos.forEach(function(v,i){{if(i<slots.length&&v.readyState>=2){{var s=slots[i];var bx=s.x*scale_x-bleed,by=s.y*scale_y-bleed,bw=s.w*scale_x+bleed*2,bh=s.h*scale_y+bleed*2;ctx.drawImage(v,Math.max(0,bx),Math.max(0,by),bw,bh);}}}});
                             if(frameImg.complete)ctx.drawImage(frameImg,0,0,cvs.width,cvs.height);
                             requestAnimationFrame(draw);
                         }}
