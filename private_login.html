@@ -230,6 +230,58 @@
             font-weight: 600;
         }
 
+        .remember-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1.2rem;
+        }
+
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #a0a4b8;
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .remember-label input[type=checkbox] {
+            display: none;
+        }
+
+        .check-box {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #4a4e63;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .check-box::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: #4ecdc4;
+            transform: scale(0);
+            transition: transform 0.15s ease;
+        }
+
+        .remember-label input:checked + .check-box {
+            border-color: #4ecdc4;
+        }
+
+        .remember-label input:checked + .check-box::after {
+            transform: scale(1);
+        }
+
         @media (max-width: 500px) {
             .login-card {
                 margin: 1rem;
@@ -280,6 +332,13 @@
                     <button type="button" class="toggle-pw" onclick="togglePassword()">👁</button>
                 </div>
             </div>
+            <div class="remember-row">
+                <label class="remember-label">
+                    <input type="checkbox" id="remember">
+                    <span class="check-box"></span>
+                    Simpan Sandi
+                </label>
+            </div>
             <button type="submit" class="btn-login" id="btn-login">Sign In</button>
         </form>
 
@@ -306,6 +365,7 @@
             const fd = new FormData();
             fd.append('username', u);
             fd.append('password', p);
+            fd.append('remember', document.getElementById('remember').checked ? '1' : '0');
 
             const res = await fetch('/api/admin/login', { method: 'POST', body: fd });
             if (res.ok) {

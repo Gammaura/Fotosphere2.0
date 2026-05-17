@@ -927,14 +927,15 @@ def admin_login_page():
     return FileResponse("private_login.html")
 
 @app.post("/api/admin/login")
-def api_admin_login(username: str = Form(...), password: str = Form(...)):
+def api_admin_login(username: str = Form(...), password: str = Form(...), remember: str = Form("0")):
     admin_password = os.environ.get("ADMIN_PASSWORD", "fotosphere")
     if username == "admin" and password == admin_password:
         # Generate a cryptographically secure random token per login
         token = secrets.token_urlsafe(32)
         ADMIN_TOKENS.add(token)
         response = JSONResponse({"success": True})
-        response.set_cookie(key="admin_token", value=token, httponly=True, samesite="lax")
+        max_age = 30 * 24 * 60 * 60 if remember == "1" else None  # 30 days or session
+        response.set_cookie(key="admin_token", value=token, httponly=True, samesite="lax", max_age=max_age)
         return response
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
