@@ -818,8 +818,8 @@ def download_page(session_id: str, request: Request):
             if i >= len(live_clip_urls): break
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
-            v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" preload="auto" crossorigin="anonymous" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
+            v_url = live_clip_urls[i]  # Use direct Supabase URL for video streaming
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" preload="auto" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])
