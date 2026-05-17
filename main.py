@@ -772,11 +772,18 @@ def download_page(session_id: str, request: Request):
     # Get frame metadata for live photo frame view
     frame_info = None
     if frame_choice:
-        frames = get_frames()
+        # Search in public frames first, then custom frames
+        frames = scan_frames_dir("static/frames")
         for f in frames:
             if f["id"] == frame_choice:
                 frame_info = f
                 break
+        if not frame_info:
+            custom_frames = scan_frames_dir("static/custom_frames")
+            for f in custom_frames:
+                if f["id"] == frame_choice:
+                    frame_info = f
+                    break
     
     gif_url = ""
     base_path = ""
@@ -804,7 +811,8 @@ def download_page(session_id: str, request: Request):
     live_frame_html = ""
     if frame_info and live_clip_urls:
         fw, fh = frame_info["width"], frame_info["height"]
-        frame_thumb = f"/frames/{frame_info['file']}"
+        frame_dir = "custom_frames" if os.path.exists(os.path.join("static/custom_frames", frame_info["file"])) else "frames"
+        frame_thumb = f"/{frame_dir}/{frame_info['file']}"
         slots_html = ""
         for i, s in enumerate(frame_info["slots"]):
             if i >= len(live_clip_urls): break
