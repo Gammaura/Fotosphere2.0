@@ -3,7 +3,7 @@
 (function(){const h=(window.innerHeight-80)+'px',w=(window.innerWidth-80)+'px';document.documentElement.style.setProperty('--init-h',h);document.documentElement.style.setProperty('--init-w',w)})();
 function showModal(t,s,i='✨'){document.getElementById('modal-title').innerText=t;document.getElementById('modal-sub').innerText=s;document.getElementById('modal-icon').innerText=i;document.getElementById('overlay-modal').style.display='flex'}
 function hideModal(){document.getElementById('overlay-modal').style.display='none'}
-const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:false,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[],qrisPrice:30000};
+const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:true,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[],qrisPrice:30000};
 let _idleT=null,_idleLimit=120000; // 2 min idle auto-return
 function resetIdle(){if(_idleT)clearTimeout(_idleT);_idleT=setTimeout(()=>{const cur=document.querySelector('.screen.active');if(cur&&(cur.id==='screen-paymethod'||cur.id==='screen-qris'||cur.id==='screen-voucher'||cur.id==='screen-ticket')){goHome();showModal('Sesi Idle','Kembali ke halaman utama karena tidak ada aktivitas','⏳')}},_idleLimit)}
 ['click','touchstart','keydown'].forEach(e=>document.addEventListener(e,resetIdle,{passive:true}));
