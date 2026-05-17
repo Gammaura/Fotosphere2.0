@@ -893,6 +893,7 @@
             width: 100%;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 
 <body>
@@ -1158,7 +1159,19 @@
         </div>
     </div>
 
-    <!-- Edit Frame Modal -->
+    <!-- Barcode Modal -->
+    <div class="modal-overlay" id="barcode-modal">
+        <div class="modal-box" style="max-width:360px">
+            <div class="modal-icon">🔖</div>
+            <div class="modal-title" id="barcode-modal-title">Barcode Ticket</div>
+            <div style="margin:1.2rem 0;background:#fff;padding:1.2rem;border-radius:var(--radius-md);text-align:center">
+                <svg id="barcode-svg"></svg>
+            </div>
+            <div style="font-size:.75rem;color:#999;margin-bottom:1rem" id="barcode-modal-code"></div>
+            <button class="modal-close" onclick="document.getElementById('barcode-modal').classList.remove('show')">Tutup</button>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="edit-frame-modal">
         <div class="modal-box">
             <div class="modal-icon">✏️</div>
@@ -1528,7 +1541,10 @@
                     <td><span class="badge ${t.uses_left > 0 ? 'badge-green' : 'badge-gray'}">${t.uses_left}x</span></td>
                     <td>${t.custom_frame ? '<span class="badge badge-orange">' + t.custom_frame + '</span>' : '<span style="color:#ccc">—</span>'}</td>
                     <td style="font-size:.65rem">${dateStr}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="deleteTicket('${code}')">Hapus</button></td>
+                    <td>
+                        <button class="btn btn-sm" onclick="showBarcode('${code}')" style="margin-right:4px">🔖 Barcode</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteTicket('${code}')">Hapus</button>
+                    </td>
                 </tr>
             `}).join('');
         }
@@ -1566,6 +1582,25 @@
             loadTickets();
         }
 
+        function showBarcode(code) {
+            document.getElementById('barcode-modal-title').textContent = 'Barcode Ticket';
+            document.getElementById('barcode-modal-code').textContent = code;
+            try {
+                JsBarcode('#barcode-svg', code, {
+                    format: 'CODE128',
+                    width: 2,
+                    height: 80,
+                    displayValue: true,
+                    fontSize: 14,
+                    font: 'inherit',
+                    margin: 10,
+                    background: '#ffffff'
+                });
+            } catch (e) {
+                document.getElementById('barcode-svg').innerHTML = '<text x="50%" y="50%" text-anchor="middle" font-size="12">Gagal generate barcode</text>';
+            }
+            document.getElementById('barcode-modal').classList.add('show');
+        }
         // ═══ PAYMENTS ═══
         async function loadPayments() {
             const r = await fetch('/api/admin/payments');
