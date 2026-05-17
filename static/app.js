@@ -63,7 +63,19 @@ async function goScanTicket(){
         const devices = await Html5Qrcode.getCameras();
         if(devices && devices.length) {
             _scanner=new Html5Qrcode("ticket-reader");
-            await _scanner.start(devices[0].id, {fps:20}, async(txt)=>{
+            // Prefer rear camera for better scanning, fallback to first
+            const rearCam = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[0];
+            await _scanner.start(rearCam.id, {
+                fps: 30,
+                qrbox: { width: 280, height: 280 },
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13
+                ],
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+            }, async(txt)=>{
                 if(_scanP)return;_scanP=true;
                 try {
                     const r=await fetch('/api/ticket/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:txt})});

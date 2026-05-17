@@ -246,14 +246,43 @@ def make_qr_b64(url: str) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 @app.get("/api/qr/{code}")
-def serve_qr_image(code: str):
-    qr = qrcode.QRCode(version=2, box_size=15, border=2, error_correction=qrcode.constants.ERROR_CORRECT_H)
+def serve_qr_page(code: str):
+    qr = qrcode.QRCode(version=2, box_size=15, border=3, error_correction=qrcode.constants.ERROR_CORRECT_H)
     qr.add_data(code)
     qr.make(fit=True)
     img = qr.make_image(fill_color="#1a1a2e", back_color="#ffffff")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    return Response(content=buf.getvalue(), media_type="image/png")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    
+    html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fotosphere Ticket</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}}
+.card{{background:#111;border-radius:24px;padding:2.5rem 2rem;text-align:center;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)}}
+.title{{color:#fff;font-size:1.4rem;font-weight:800;margin-bottom:.3rem}}
+.sub{{color:#888;font-size:.75rem;margin-bottom:1.5rem}}
+.qr-box{{background:#fff;border-radius:16px;padding:1.5rem;display:inline-block;margin-bottom:1.2rem}}
+.qr-box img{{display:block;width:220px;height:220px}}
+.code{{color:#4ecdc4;font-size:1.5rem;font-weight:900;letter-spacing:4px;margin-bottom:.5rem}}
+.hint{{color:#666;font-size:.7rem}}
+.badge{{display:inline-block;background:linear-gradient(135deg,#4ecdc4,#44a8a0);color:#fff;padding:6px 16px;border-radius:50px;font-size:.7rem;font-weight:700;margin-bottom:1rem}}
+</style>
+</head><body>
+<div class="card">
+<div class="title">Fotosphere</div>
+<div class="sub">Ticket Eksklusif</div>
+<div class="badge">🎫 SCAN DI PHOTOBOOTH</div>
+<div class="qr-box"><img src="data:image/png;base64,{qr_b64}" alt="QR"></div>
+<div class="code">{code}</div>
+<div class="hint">Arahkan QR code ini ke kamera photobooth</div>
+</div>
+</body></html>"""
+    return HTMLResponse(content=html)
 
 def make_gif(photos: list, filter_name: str = "Natural") -> bytes:
     """Create animated GIF from session photos."""

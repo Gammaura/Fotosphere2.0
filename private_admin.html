@@ -894,6 +894,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
@@ -1164,10 +1165,12 @@
         <div class="modal-box" style="max-width:360px">
             <div class="modal-icon">🔖</div>
             <div class="modal-title" id="barcode-modal-title">Barcode Ticket</div>
-            <div style="margin:1.2rem 0;background:#fff;padding:1.2rem;border-radius:var(--radius-md);text-align:center">
-                <svg id="barcode-svg"></svg>
+            <div style="margin:1.2rem 0;background:#fff;padding:1.5rem;border-radius:var(--radius-md);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">
+                <div id="barcode-qr" style="display:inline-block"></div>
+                <svg id="barcode-svg" style="max-width:100%"></svg>
             </div>
-            <div style="font-size:.75rem;color:#999;margin-bottom:1rem" id="barcode-modal-code"></div>
+            <div style="font-size:.8rem;color:#666;margin-bottom:.5rem;font-weight:600" id="barcode-modal-code"></div>
+            <div style="font-size:.65rem;color:#aaa;margin-bottom:1rem">Scan QR code ini di kamera photobooth</div>
             <button class="modal-close" onclick="document.getElementById('barcode-modal').classList.remove('show')">Tutup</button>
         </div>
     </div>
@@ -1585,20 +1588,31 @@
         function showBarcode(code) {
             document.getElementById('barcode-modal-title').textContent = 'Barcode Ticket';
             document.getElementById('barcode-modal-code').textContent = code;
+            
+            // Generate QR code (primary - this is what the scanner reads)
+            const qrEl = document.getElementById('barcode-qr');
+            qrEl.innerHTML = '';
+            new QRCode(qrEl, {
+                text: code,
+                width: 180,
+                height: 180,
+                colorDark: '#1a1a2e',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Generate barcode (secondary reference)
             try {
                 JsBarcode('#barcode-svg', code, {
                     format: 'CODE128',
-                    width: 2,
-                    height: 80,
-                    displayValue: true,
-                    fontSize: 14,
-                    font: 'inherit',
-                    margin: 10,
+                    width: 1.5,
+                    height: 40,
+                    displayValue: false,
+                    margin: 5,
                     background: '#ffffff'
                 });
-            } catch (e) {
-                document.getElementById('barcode-svg').innerHTML = '<text x="50%" y="50%" text-anchor="middle" font-size="12">Gagal generate barcode</text>';
-            }
+            } catch (e) {}
+            
             document.getElementById('barcode-modal').classList.add('show');
         }
         // ═══ PAYMENTS ═══
