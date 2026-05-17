@@ -232,7 +232,11 @@
                     </div>
                     <div>
                         <label>Kategori</label>
-                        <input type="text" id="frame-category" placeholder="Contoh: Animal" value="Other">
+                        <select id="frame-category" onchange="toggleCustomCat('frame-category','frame-category-custom')">
+                            <option value="Other">Other</option>
+                            <option value="__custom__">+ Lainnya...</option>
+                        </select>
+                        <input type="text" id="frame-category-custom" placeholder="Ketik kategori baru" style="display:none;margin-top:6px">
                     </div>
                     <div>
                         <label>File PNG (area transparan = slot foto)</label>
@@ -416,7 +420,11 @@
             </div>
             <div class="edit-modal-field">
                 <label>Kategori</label>
-                <input type="text" id="edit-frame-category" placeholder="Kategori">
+                <select id="edit-frame-category" onchange="toggleCustomCat('edit-frame-category','edit-frame-category-custom')">
+                    <option value="Other">Other</option>
+                    <option value="__custom__">+ Lainnya...</option>
+                </select>
+                <input type="text" id="edit-frame-category-custom" placeholder="Ketik kategori baru" style="display:none;margin-top:6px">
             </div>
             <div style="display:flex;gap:10px;margin-top:1.5rem">
                 <button class="btn btn-primary" style="flex:1" onclick="saveFrameEdit()">💾 Simpan</button>
@@ -427,6 +435,38 @@
 
     <script>
         let _allFrames = [];
+        let _categories = ['Other'];
+
+        // ═══ CATEGORY HELPERS ═══
+        async function loadCategories() {
+            try {
+                const r = await fetch('/api/admin/categories');
+                _categories = await r.json();
+            } catch(e) { _categories = ['Other']; }
+            populateCategorySelect('frame-category');
+            populateCategorySelect('edit-frame-category');
+        }
+        function populateCategorySelect(selId) {
+            const sel = document.getElementById(selId);
+            if (!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = _categories.map(c => `<option value="${c}">${c}</option>`).join('') +
+                '<option value="__custom__">+ Lainnya...</option>';
+            if (_categories.includes(cur)) sel.value = cur;
+        }
+        function toggleCustomCat(selId, inputId) {
+            const sel = document.getElementById(selId);
+            const inp = document.getElementById(inputId);
+            inp.style.display = sel.value === '__custom__' ? 'block' : 'none';
+            if (sel.value === '__custom__') inp.focus();
+        }
+        function getCategoryValue(selId, inputId) {
+            const sel = document.getElementById(selId);
+            if (sel.value === '__custom__') {
+                return document.getElementById(inputId).value.trim() || 'Other';
+            }
+            return sel.value || 'Other';
+        }
 
         function showAdminModal(title, text, waLink=null, icon='✅') {
             document.getElementById('admin-modal-icon').textContent = icon;
@@ -458,7 +498,7 @@
                 document.getElementById('topbar-breadcrumb-page').innerText = label;
             }
             document.getElementById('panel-' + name).classList.add('act');
-            if (name === 'frames' || name === 'custom-frames') loadFrames();
+            if (name === 'frames' || name === 'custom-frames') { loadFrames(); loadCategories(); }
             if (name === 'vouchers') { loadVouchers(); populateFrameSelect('v-frame'); }
             if (name === 'tickets') { loadTickets(); populateFrameSelect('t-frame'); }
             if (name === 'payments') loadPayments();
@@ -527,7 +567,7 @@
             if (!fileInput.files[0]) return alert('Pilih file PNG');
             
             const customName = nameInput.value.trim();
-            const category = catInput.value.trim() || 'Other';
+            const category = getCategoryValue('frame-category', 'frame-category-custom');
             const fd = new FormData();
             fd.append('frame', fileInput.files[0]);
             if (customName) fd.append('name', customName);
@@ -543,7 +583,11 @@
                 showAdminModal('Gagal', 'Terjadi kesalahan saat upload', null, '❌');
             }
             
-            fileInput.value = ''; nameInput.value = ''; catInput.value = 'Other';
+            fileInput.value = ''; nameInput.value = '';
+            document.getElementById('frame-category').value = 'Other';
+            document.getElementById('frame-category-custom').value = '';
+            document.getElementById('frame-category-custom').style.display = 'none';
+            loadCategories();
             loadFrames();
         }
 
@@ -580,7 +624,17 @@
         function openEditModal(file, name, category) {
             document.getElementById('edit-frame-file').value = file;
             document.getElementById('edit-frame-name').value = name;
-            document.getElementById('edit-frame-category').value = category;
+            // Set category dropdown or show custom input
+            const sel = document.getElementById('edit-frame-category');
+            const inp = document.getElementById('edit-frame-category-custom');
+            if (_categories.includes(category)) {
+                sel.value = category;
+                inp.style.display = 'none';
+            } else {
+                sel.value = '__custom__';
+                inp.value = category;
+                inp.style.display = 'block';
+            }
             document.getElementById('edit-frame-modal').classList.add('show');
         }
         function closeEditModal() {
@@ -589,7 +643,7 @@
         async function saveFrameEdit() {
             const file = document.getElementById('edit-frame-file').value;
             const name = document.getElementById('edit-frame-name').value.trim();
-            const category = document.getElementById('edit-frame-category').value.trim() || 'Other';
+            const category = getCategoryValue('edit-frame-category', 'edit-frame-category-custom');
             if (!name) return alert('Nama tidak boleh kosong');
             const r = await fetch('/api/admin/frames/' + file, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
@@ -763,6 +817,7 @@
         }
 
         loadFrames();
+        loadCategories();
     </script>
 </body>
 </html>

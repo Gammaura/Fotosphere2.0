@@ -32,7 +32,7 @@ from db import (
     # Frames
     db_upsert_frame, db_delete_frame, storage_upload_frame, storage_download_frame,
     db_upsert_custom_frame, db_delete_custom_frame, storage_upload_custom_frame, storage_download_custom_frame,
-    sync_frames_to_local, upload_local_frames_to_supabase,
+    sync_frames_to_local, upload_local_frames_to_supabase, db_get_all_categories,
     # Vouchers
     db_upsert_voucher, db_update_voucher_uses, db_delete_voucher,
     sync_vouchers_from_db, upload_local_vouchers_to_supabase,
@@ -1014,6 +1014,10 @@ async def api_validate_ticket(request: Request):
         log_debug(f"TICKET VALIDATE UNHANDLED ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/admin/categories")
+def admin_categories(_=Depends(require_admin)):
+    return db_get_all_categories()
+
 # ─── ADMIN: FRAMES ───
 @app.get("/api/admin/frames")
 def admin_list_frames(_=Depends(require_admin)):
@@ -1096,10 +1100,10 @@ async def admin_upload_frame(
     try:
         if is_private_bool:
             storage_url = storage_upload_custom_frame(fname, content)
-            db_upsert_custom_frame(fname, display, slots, storage_url)
+            db_upsert_custom_frame(fname, display, slots, storage_url, category)
         else:
             storage_url = storage_upload_frame(fname, content)
-            db_upsert_frame(fname, display, slots, storage_url)
+            db_upsert_frame(fname, display, slots, storage_url, category)
     except Exception as e:
         print(f"Supabase upload warning: {e}")
 
@@ -1145,9 +1149,9 @@ async def admin_edit_frame(filename: str, request: Request, _=Depends(require_ad
             is_private = data.get("is_private", False)
             try:
                 if is_private or t_dir == "static/custom_frames":
-                    db_upsert_custom_frame(filename, new_name, data.get("slots", []), "")
+                    db_upsert_custom_frame(filename, new_name, data.get("slots", []), "", new_category)
                 else:
-                    db_upsert_frame(filename, new_name, data.get("slots", []), "")
+                    db_upsert_frame(filename, new_name, data.get("slots", []), "", new_category)
             except Exception as e:
                 print(f"Supabase frame update warning: {e}")
             break

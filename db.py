@@ -126,9 +126,9 @@ def db_get_all_frames() -> list:
     res = sb.table("frames").select("*").order("created_at").execute()
     return res.data or []
 
-def db_upsert_frame(frame_id: str, display_name: str, slots: list, storage_url: str) -> dict:
+def db_upsert_frame(frame_id: str, display_name: str, slots: list, storage_url: str, category: str = "Other") -> dict:
     sb = get_supabase()
-    data = {"id": frame_id, "display_name": display_name, "slots": slots, "storage_url": storage_url}
+    data = {"id": frame_id, "display_name": display_name, "slots": slots, "storage_url": storage_url, "category": category}
     res = sb.table("frames").upsert(data).execute()
     return res.data[0] if res.data else {}
 
@@ -149,9 +149,9 @@ def db_get_all_custom_frames() -> list:
     except:
         return [] # Table might not exist yet
 
-def db_upsert_custom_frame(frame_id: str, display_name: str, slots: list, storage_url: str) -> dict:
+def db_upsert_custom_frame(frame_id: str, display_name: str, slots: list, storage_url: str, category: str = "Other") -> dict:
     sb = get_supabase()
-    data = {"id": frame_id, "display_name": display_name, "slots": slots, "storage_url": storage_url}
+    data = {"id": frame_id, "display_name": display_name, "slots": slots, "storage_url": storage_url, "category": category}
     res = sb.table("custom_frames").upsert(data).execute()
     return res.data[0] if res.data else {}
 
@@ -220,6 +220,7 @@ def sync_frames_to_local(frames_dir: str = "static/frames", custom_frames_dir: s
             if frame.get("slots"): sidecar["slots"] = frame["slots"]
             if frame.get("display_name"): sidecar["display_name"] = frame["display_name"]
             sidecar["is_private"] = False
+            sidecar["category"] = frame.get("category", "Other")
             with open(json_path, 'w') as jf:
                 json.dump(sidecar, jf, indent=2)
 
@@ -245,6 +246,7 @@ def sync_frames_to_local(frames_dir: str = "static/frames", custom_frames_dir: s
             if frame.get("slots"): sidecar["slots"] = frame["slots"]
             if frame.get("display_name"): sidecar["display_name"] = frame["display_name"]
             sidecar["is_private"] = True
+            sidecar["category"] = frame.get("category", "Other")
             with open(json_path, 'w') as jf:
                 json.dump(sidecar, jf, indent=2)
 
@@ -270,9 +272,10 @@ def upload_local_frames_to_supabase(frames_dir: str = "static/frames"):
                 content = f.read()
             storage_url = storage_upload_frame(fname, content)
 
-            # Read sidecar for display_name and slots
+            # Read sidecar for display_name, slots, category
             display_name = fname.replace('.png', '').replace('_', ' ').title()
             slots = []
+            category = "Other"
             if os.path.exists(json_path):
                 try:
                     with open(json_path, 'r') as jf:
@@ -281,13 +284,32 @@ def upload_local_frames_to_supabase(frames_dir: str = "static/frames"):
                         display_name = sidecar["display_name"]
                     if sidecar.get("slots"):
                         slots = sidecar["slots"]
+                    if sidecar.get("category"):
+                        category = sidecar["category"]
                 except:
                     pass
 
-            db_upsert_frame(fname, display_name, slots, storage_url)
+            db_upsert_frame(fname, display_name, slots, storage_url, category)
             print(f"Uploaded frame to Supabase: {fname}")
     except Exception as e:
         print(f"Frame upload migration error: {e}")
+
+
+def db_get_all_categories() -> list:
+    """Get distinct categories from both frames and custom_frames tables."""
+    cats = set()
+    try:
+        for f in db_get_all_frames():
+            cats.add(f.get("category", "Other"))
+    except: pass
+    try:
+        for f in db_get_all_custom_frames():
+            cats.add(f.get("category", "Other"))
+    except: pass
+    cats.discard("")
+    if not cats:
+        cats.add("Other")
+    return sorted(cats)
 
 
 # ══════════════════════════════════════════════════════════
