@@ -182,7 +182,7 @@ async function goToShoot(){
 }
 function updateCropGuide(){const f=S.frame;if(!f||!f.slots||!f.slots.length)return;const s=f.slots[S.slot]||f.slots[0];const sr=s.w/s.h;const cc=document.querySelector('.camCard');const cw=cc.offsetWidth,ch=cc.offsetHeight;let cropW,cropH;if(cw/ch>sr){cropH=ch;cropW=ch*sr}else{cropW=cw;cropH=cw/sr}const tb=(ch-cropH)/2,lb=(cw-cropW)/2;$('crop-top').style.height=tb+'px';$('crop-top').style.left='0';$('crop-top').style.right='0';$('crop-bot').style.height=tb+'px';$('crop-bot').style.left='0';$('crop-bot').style.right='0';$('crop-left').style.width=lb+'px';$('crop-left').style.top=tb+'px';$('crop-left').style.bottom=tb+'px';$('crop-right').style.width=lb+'px';$('crop-right').style.top=tb+'px';$('crop-right').style.bottom=tb+'px';const cn=$('crop-center');cn.style.left=lb+'px';cn.style.top=tb+'px';cn.style.width=cropW+'px';cn.style.height=cropH+'px'}
 function stopCam(){if(S.stream){S.stream.getTracks().forEach(t=>t.stop());S.stream=null}if(_cdI){clearInterval(_cdI);_cdI=null}stopLiveRec()}
-function setMirror(on){S.mirror=on;$('cam-vid').style.transform=on?'scaleX(-1)':'none';$('mb-mirror').classList.toggle('on',on);$('mb-normal').classList.toggle('on',!on)}
+function setMirror(on){S.mirror=on;$('cam-vid').style.transform=on?'scaleX(-1)':'none';$('mb-normal').classList.toggle('on',on);$('mb-mirror').classList.toggle('on',!on)}
 function setTimer(s){S.timerSec=s;[3,5,7].forEach(v=>$('timer-'+v).classList.toggle('on',v===s))}
 function setLivePhoto(on){S.livePhoto=on;$('lp-on').classList.toggle('on',on);$('lp-off').classList.toggle('on',!on)}
 
