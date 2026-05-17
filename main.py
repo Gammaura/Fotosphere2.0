@@ -819,7 +819,7 @@ def download_page(session_id: str, request: Request):
             lp = s["x"]/fw*100; tp = s["y"]/fh*100
             wp = s["w"]/fw*100; hp = s["h"]/fh*100
             v_url = p_inline(live_clip_urls[i], f"live_{i}.webm")
-            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
+            slots_html += f'<div style="position:absolute;left:{lp:.2f}%;top:{tp:.2f}%;width:{wp:.2f}%;height:{hp:.2f}%;overflow:hidden;z-index:1;"><video src="{v_url}" preload="auto" crossorigin="anonymous" autoplay loop muted playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;box-shadow:none;background:#222;"></video></div>'
         
         import json as _jsn
         slots_json = _jsn.dumps(frame_info["slots"])
@@ -842,9 +842,21 @@ def download_page(session_id: str, request: Request):
                     var vids=document.querySelectorAll('#live-frame-container video');
                     var ok=0,fail=0,tot=vids.length;
                     if(!tot)return;
-                    function chk(){{if(ok>0)sec.style.display='block';if(ok+fail>=tot&&ok===0)sec.style.display='none';}}
-                    vids.forEach(function(v){{v.onloadeddata=function(){{ok++;chk();}};v.onerror=function(){{fail++;v.parentElement.style.background='#333';chk();}}}});
-                    setTimeout(function(){{if(ok===0)sec.style.display='none';}},5000);
+                    function chk(){{
+                        console.log('[live] ok='+ok+' fail='+fail+' tot='+tot);
+                        if(ok>0)sec.style.display='block';
+                        if(ok+fail>=tot&&ok===0)sec.style.display='none';
+                    }}
+                    vids.forEach(function(v){{
+                        v.onloadeddata=function(){{ok++;chk();}};
+                        v.oncanplay=function(){{if(ok===0){{ok++;chk();}}}};
+                        v.onerror=function(e){{
+                            console.log('[live] error loading video:', v.src, e);
+                            fail++;v.parentElement.style.background='#333';chk();
+                        }};
+                    }});
+                    // Longer timeout for Supabase storage
+                    setTimeout(function(){{if(ok===0){{console.log('[live] timeout - no videos loaded');sec.style.display='none';}}}},15000);
                 }})();
                 
                 async function downloadLiveVideo() {{
