@@ -168,8 +168,8 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .catTab:active{transform:scale(.95)}
 
 /* ═══ FRAME GRID ═══ */
-.frameGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px}
-.fc{background:#f8f8f8;border:2px solid var(--bdr);border-radius:10px;padding:6px;text-align:center;cursor:pointer;transition:all .15s;content-visibility:auto;contain-intrinsic-size:200px 300px}
+.frameGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:14px}
+.fc{background:#f8f8f8;border:2px solid var(--bdr);border-radius:10px;padding:6px;text-align:center;cursor:pointer;transition:all .15s;min-width:0;overflow:hidden}
 .fc:hover{border-color:#aaa;transform:translateY(-2px)}
 .fc.sel{border-color:var(--dark);background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.08)}
 .fcThumb{width:100%;aspect-ratio:9/16;border-radius:5px;overflow:hidden;margin-bottom:3px;background:#eee}
