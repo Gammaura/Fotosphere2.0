@@ -500,7 +500,7 @@
                     <div class="frame-item">
                         <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(f.category||'Other').replace(/'/g,"\\'")}')">✎</button>
                         <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                        <img src="/frames/${f.file}" alt="${f.name}">
+                        <img src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
                         <div class="frame-item-info">${f.name} · ${f.photos} foto<br><span style="color:#888;font-size:0.6rem">${f.category||'Other'}</span></div>
                     </div>
                 `).join('');
@@ -512,7 +512,7 @@
                     <div class="frame-item" style="border: 2px solid #ffcc80;">
                         <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(f.category||'Other').replace(/'/g,"\\'")}')">✎</button>
                         <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
-                        <img src="/custom_frames/${f.file}" alt="${f.name}">
+                        <img src="/api/frames/thumb/${f.file}" loading="lazy" alt="${f.name}">
                         <div class="frame-item-info" style="color:#e65100">${f.name} · ${f.photos} foto<br><span style="font-size:0.6rem">🔒 Private</span></div>
                     </div>
                 `).join('');
