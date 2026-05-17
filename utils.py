@@ -111,17 +111,21 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
         if img_cv is not None and len(img_cv.shape) == 3 and img_cv.shape[2] == 4:
             alpha = img_cv[:, :, 3]
             _, mask = cv2.threshold(alpha, 10, 255, cv2.THRESH_BINARY_INV)
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Erode the mask slightly to break thin transparent bridges between slots
+            erode_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+            mask_eroded = cv2.erode(mask, erode_kernel, iterations=2)
+            
+            contours, _ = cv2.findContours(mask_eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             slots = []
             for cnt in contours:
                 x, y, w, h = cv2.boundingRect(cnt)
-                # Lowered minimum to 150x150 to catch smaller photo slots
-                if w >= 150 and h >= 150:
+                print(f"[slot-detect] candidate: x={x} y={y} w={w} h={h}")
+                if w >= 100 and h >= 100:
                     slots.append({"x": int(x), "y": int(y), "w": int(w), "h": int(h)})
             slots.sort(key=lambda s: (s["y"], s["x"]))
             
-            # Filter out nested/overlapping slots (e.g. shadow + main box)
-            # We keep the larger outer box
+            # Filter out nested/overlapping slots
             final_slots = []
             sorted_by_area = sorted(slots, key=lambda s: s['w'] * s['h'], reverse=True)
             for s in sorted_by_area:
@@ -136,6 +140,7 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
                     final_slots.append(s)
             
             final_slots.sort(key=lambda s: (s["y"], s["x"]))
+            print(f"[slot-detect] transparent: {len(final_slots)} slots detected")
             if final_slots:
                 return final_slots
 
