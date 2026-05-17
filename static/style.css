@@ -159,7 +159,7 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 .prevPh{font-size:.7rem;color:#ccc;font-weight:600}
 
 /* ═══ FRAME CATEGORY TABS ═══ */
-.catTabs{flex-shrink:0;padding:10px 14px 6px;border-bottom:1px solid var(--bdr);overflow:hidden}
+.catTabs{position:sticky;top:0;z-index:5;flex-shrink:0;padding:10px 14px 6px;border-bottom:1px solid var(--bdr);overflow:hidden;background:var(--card)}
 .catTabsInner{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 .catTabsInner::-webkit-scrollbar{display:none}
 .catTab{flex-shrink:0;background:var(--accent);color:#fff;padding:8px 24px;border-radius:50px;font-weight:800;font-size:.75rem;letter-spacing:1px;border:2.5px solid var(--accent);cursor:pointer;white-space:nowrap;transition:all .15s;opacity:.55}
@@ -411,8 +411,11 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
   }
 }
 
-/* Category Tabs */
+/* Category Tabs — sticky at top of scroll container */
 .catTabs {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     background: #fdfdfd;
     border-bottom: 2px solid #f0f0f0;
     padding: 10px 15px;

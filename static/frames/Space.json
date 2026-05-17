@@ -38,5 +38,6 @@
     }
   ],
   "display_name": "Space",
-  "is_private": false
+  "is_private": false,
+  "category": "Old"
 }
