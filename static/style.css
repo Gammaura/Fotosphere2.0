@@ -137,9 +137,9 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 
 /* ═══ SPLIT LAYOUT (frame/shoot/emoji/filter pages) ═══ */
 .splitWrap{position:absolute;inset:0;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
-.splitInner{flex:1;display:flex;gap:30px;padding:30px 40px;min-height:0;align-items:center;justify-content:center}
-.splitL{flex:1;height:640px;display:flex;min-height:0;min-width:0}
-.splitR{flex:1;height:640px;display:flex;flex-direction:column;min-height:0;min-width:0}
+.splitInner{flex:1;display:flex;gap:40px;padding:40px 50px;min-height:0;align-items:center;justify-content:center}
+.splitL{width:900px;height:640px;flex-shrink:0;display:flex;min-height:0}
+.splitR{width:310px;height:640px;flex-shrink:0;display:flex;flex-direction:column;min-height:0}
 
 /* Bordered card (left panel) */
 .bCard{width:100%;display:flex;flex-direction:column;background:var(--card);border:2.5px solid var(--dark);border-radius:14px;overflow:hidden;min-height:0;flex:1}
