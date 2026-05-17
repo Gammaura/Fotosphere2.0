@@ -829,9 +829,9 @@ def download_page(session_id: str, request: Request):
                         await Promise.all(Array.from(videos).map(function(v){{v.currentTime=0;return v.play().catch(function(){{}});}}));
                         await new Promise(function(r){{setTimeout(r,200);}});
                         var stream=cvs.captureStream(30);
-                        var mime='video/webm;codecs=vp9';
+                        var mime='video/mp4';
+                        if(!MediaRecorder.isTypeSupported(mime))mime='video/webm;codecs=vp9';
                         if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';
-                        if(!MediaRecorder.isTypeSupported(mime))mime='video/mp4';
                         var recorder=new MediaRecorder(stream,{{mimeType:mime}});
                         var chunks=[];
                         recorder.ondataavailable=function(e){{if(e.data.size>0)chunks.push(e.data);}};
@@ -849,7 +849,7 @@ def download_page(session_id: str, request: Request):
                             var blob=new Blob(chunks,{{type:mime}});
                             var url=URL.createObjectURL(blob);
                             var a=document.createElement('a');a.href=url;
-                            a.download='fotosphere_live.'+(mime.indexOf('mp4')>=0?'mp4':'webm');
+                            a.download='fotosphere_live.'+(mime.indexOf('mp4')>=0?'mov':'webm');
                             document.body.appendChild(a);a.click();document.body.removeChild(a);
                             URL.revokeObjectURL(url);
                             btn.style.display='flex';loader.style.display='none';
