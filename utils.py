@@ -115,20 +115,18 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
             slots = []
             for cnt in contours:
                 x, y, w, h = cv2.boundingRect(cnt)
-                # Ignore tiny slivers or noise (minimum 300x300 for a valid photo slot)
-                if w >= 300 and h >= 300:
+                # Lowered minimum to 150x150 to catch smaller photo slots
+                if w >= 150 and h >= 150:
                     slots.append({"x": int(x), "y": int(y), "w": int(w), "h": int(h)})
             slots.sort(key=lambda s: (s["y"], s["x"]))
             
             # Filter out nested/overlapping slots (e.g. shadow + main box)
             # We keep the larger outer box
             final_slots = []
-            # Sort by area descending to process larger boxes first
             sorted_by_area = sorted(slots, key=lambda s: s['w'] * s['h'], reverse=True)
             for s in sorted_by_area:
                 is_nested = False
                 for f in final_slots:
-                    # Check if s is substantially inside f
                     if (s['x'] >= f['x'] - 20 and s['y'] >= f['y'] - 20 and 
                         s['x'] + s['w'] <= f['x'] + f['w'] + 20 and 
                         s['y'] + s['h'] <= f['y'] + f['h'] + 20):
@@ -138,7 +136,48 @@ def detect_transparent_slots(png_path: str, min_area: int = 5000) -> list:
                     final_slots.append(s)
             
             final_slots.sort(key=lambda s: (s["y"], s["x"]))
-            return final_slots
+            if final_slots:
+                return final_slots
+
+        # ── Fallback: detect WHITE rectangular regions ──
+        # For frames that use solid white slots instead of transparency
+        if img_cv is not None:
+            bgr = img_cv[:, :, :3] if len(img_cv.shape) == 3 and img_cv.shape[2] >= 3 else cv2.cvtColor(img_cv, cv2.COLOR_GRAY2BGR)
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            _, white_mask = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)
+            
+            # Morphological close to fill gaps from wavy/decorative borders
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+            white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel)
+            
+            contours, _ = cv2.findContours(white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            white_slots = []
+            for cnt in contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                area = cv2.contourArea(cnt)
+                rect_area = w * h
+                # Must be reasonably rectangular (fill > 55%) and large enough
+                if w >= 150 and h >= 100 and rect_area >= min_area and (rect_area == 0 or area / rect_area > 0.55):
+                    white_slots.append({"x": int(x), "y": int(y), "w": int(w), "h": int(h)})
+            
+            # Deduplicate nested white slots
+            ws_final = []
+            sorted_ws = sorted(white_slots, key=lambda s: s['w'] * s['h'], reverse=True)
+            for s in sorted_ws:
+                is_nested = False
+                for f in ws_final:
+                    if (s['x'] >= f['x'] - 20 and s['y'] >= f['y'] - 20 and 
+                        s['x'] + s['w'] <= f['x'] + f['w'] + 20 and 
+                        s['y'] + s['h'] <= f['y'] + f['h'] + 20):
+                        is_nested = True
+                        break
+                if not is_nested:
+                    ws_final.append(s)
+            
+            ws_final.sort(key=lambda s: (s["y"], s["x"]))
+            if ws_final:
+                print(f"[slot-detect] No transparent slots, detected {len(ws_final)} white slots")
+                return ws_final
     except Exception as e:
         print(f"OpenCV slot detection failed, falling back to PIL BFS: {e}")
 
