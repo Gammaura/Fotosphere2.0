@@ -292,19 +292,26 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         sw = int(slot["w"] * scale)
         sh = int(slot["h"] * scale)
         
+        # Add bleed (overscan) to eliminate white edge gaps from rounding
+        bleed = 3
+        bx = max(0, sx - bleed)
+        by = max(0, sy - bleed)
+        bw = min(fw - bx, sw + bleed * 2)
+        bh = min(fh - by, sh + bleed * 2)
+        
         # Cover-crop: resize photo to fill slot while maintaining aspect ratio
         pw, ph = photo.size
-        p_scale = max(sw / pw, sh / ph)
+        p_scale = max(bw / pw, bh / ph)
         new_w = int(pw * p_scale)
         new_h = int(ph * p_scale)
         photo = photo.resize((new_w, new_h), Image.LANCZOS)
         
         # Center crop
-        left = (new_w - sw) // 2
-        top = (new_h - sh) // 2
-        photo = photo.crop((left, top, left + sw, top + sh))
+        left = (new_w - bw) // 2
+        top = (new_h - bh) // 2
+        photo = photo.crop((left, top, left + bw, top + bh))
         
-        canvas.paste(photo, (sx, sy))
+        canvas.paste(photo, (bx, by))
     
     # Paste frame on top (frame has transparency where photos show through)
     canvas = Image.alpha_composite(canvas, frame)
