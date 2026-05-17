@@ -337,7 +337,7 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         sh = int(slot["h"] * scale)
         
         # Add bleed (overscan) to eliminate white edge gaps from rounding
-        bleed = 3
+        bleed = 8
         bx = max(0, sx - bleed)
         by = max(0, sy - bleed)
         bw = min(fw - bx, sw + bleed * 2)
