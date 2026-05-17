@@ -319,8 +319,19 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         fh = int(frame.height * scale)
         frame = frame.resize((fw, fh), Image.LANCZOS)
     
-    # Create base canvas
-    canvas = Image.new("RGBA", (fw, fh), (255, 255, 255, 255))
+    # Sample frame's dominant opaque color for canvas background
+    # This prevents white gaps showing through rounded/arch slot borders
+    frame_np = np.array(frame)
+    opaque_mask = frame_np[:, :, 3] > 200  # only fully opaque pixels
+    if opaque_mask.any():
+        opaque_pixels = frame_np[opaque_mask][:, :3]
+        avg_color = tuple(int(c) for c in np.median(opaque_pixels, axis=0))
+        bg_color = (*avg_color, 255)
+    else:
+        bg_color = (30, 30, 30, 255)
+    
+    # Create base canvas with frame-matching background
+    canvas = Image.new("RGBA", (fw, fh), bg_color)
     
     # Place each photo in its slot
     for i, slot in enumerate(slots):
@@ -336,8 +347,8 @@ def composite_photos_on_frame(frame_path: str, photos: list, slots: list,
         sw = int(slot["w"] * scale)
         sh = int(slot["h"] * scale)
         
-        # Add bleed (overscan) to eliminate white edge gaps from rounding
-        bleed = 8
+        # Add bleed (overscan) to eliminate edge gaps from rounding/curves
+        bleed = 15
         bx = max(0, sx - bleed)
         by = max(0, sy - bleed)
         bw = min(fw - bx, sw + bleed * 2)
