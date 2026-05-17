@@ -787,6 +787,47 @@
         .edit-modal-field input {
             width: 100%;
         }
+
+        .btn-add-cat {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            padding: 0;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .btn-add-cat span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-light);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .btn-add-cat:hover {
+            color: var(--primary-hover);
+        }
+
+        .new-cat-wrap {
+            margin-top: 8px;
+        }
+
+        .new-cat-wrap input {
+            width: 100%;
+        }
     </style>
 </head>
 
@@ -851,13 +892,15 @@
                             </div>
                             <div class="field">
                                 <label>Kategori</label>
-                                <select id="frame-category"
-                                    onchange="toggleCustomCat('frame-category','frame-category-custom')">
-                                    <option value="__custom__">+ Tambah Kategori Baru...</option>
+                                <select id="frame-category">
                                     <option value="Other">Other</option>
                                 </select>
-                                <input type="text" id="frame-category-custom" placeholder="Ketik kategori baru"
-                                    style="display:none;margin-top:6px">
+                                <button type="button" class="btn-add-cat" onclick="toggleNewCat('frame-new-cat-wrap')">
+                                    <span>＋</span> Tambah Kategori Baru
+                                </button>
+                                <div class="new-cat-wrap" id="frame-new-cat-wrap" style="display:none">
+                                    <input type="text" id="frame-category-custom" placeholder="Nama kategori baru">
+                                </div>
                             </div>
                             <input type="hidden" id="frame-private" value="false">
                             <button class="btn" onclick="uploadFrame()" style="align-self:flex-start">📤 Upload</button>
@@ -1080,13 +1123,15 @@
             </div>
             <div class="edit-modal-field">
                 <label>Kategori</label>
-                <select id="edit-frame-category"
-                    onchange="toggleCustomCat('edit-frame-category','edit-frame-category-custom')">
-                    <option value="__custom__">+ Tambah Kategori Baru...</option>
+                <select id="edit-frame-category">
                     <option value="Other">Other</option>
                 </select>
-                <input type="text" id="edit-frame-category-custom" placeholder="Ketik kategori baru"
-                    style="display:none;margin-top:6px">
+                <button type="button" class="btn-add-cat" onclick="toggleNewCat('edit-new-cat-wrap')">
+                    <span>＋</span> Tambah Kategori Baru
+                </button>
+                <div class="new-cat-wrap" id="edit-new-cat-wrap" style="display:none">
+                    <input type="text" id="edit-frame-category-custom" placeholder="Nama kategori baru">
+                </div>
             </div>
             <div style="display:flex;gap:10px;margin-top:1.5rem">
                 <button class="btn btn-primary" style="flex:1" onclick="saveFrameEdit()">💾 Simpan</button>
@@ -1112,22 +1157,20 @@
             const sel = document.getElementById(selId);
             if (!sel) return;
             const cur = sel.value;
-            sel.innerHTML = '<option value="__custom__">+ Tambah Kategori Baru...</option>' +
-                _categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            sel.innerHTML = _categories.map(c => `<option value="${c}">${c}</option>`).join('');
             if (_categories.includes(cur)) sel.value = cur;
         }
-        function toggleCustomCat(selId, inputId) {
-            const sel = document.getElementById(selId);
-            const inp = document.getElementById(inputId);
-            inp.style.display = sel.value === '__custom__' ? 'block' : 'none';
-            if (sel.value === '__custom__') inp.focus();
+        function toggleNewCat(wrapId) {
+            const wrap = document.getElementById(wrapId);
+            const isHidden = wrap.style.display === 'none';
+            wrap.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) wrap.querySelector('input').focus();
         }
         function getCategoryValue(selId, inputId) {
-            const sel = document.getElementById(selId);
-            if (sel.value === '__custom__') {
-                return document.getElementById(inputId).value.trim() || 'Other';
-            }
-            return sel.value || 'Other';
+            const inp = document.getElementById(inputId);
+            const custom = inp.value.trim();
+            if (custom) return custom;
+            return document.getElementById(selId).value || 'Other';
         }
 
         function showAdminModal(title, text, waLink = null, icon = '✅') {
@@ -1248,7 +1291,7 @@
             fileInput.value = ''; nameInput.value = '';
             document.getElementById('frame-category').value = 'Other';
             document.getElementById('frame-category-custom').value = '';
-            document.getElementById('frame-category-custom').style.display = 'none';
+            document.getElementById('frame-new-cat-wrap').style.display = 'none';
             loadCategories();
             loadFrames();
         }
@@ -1286,16 +1329,18 @@
         function openEditModal(file, name, category) {
             document.getElementById('edit-frame-file').value = file;
             document.getElementById('edit-frame-name').value = name;
-            // Set category dropdown or show custom input
+            // Set category dropdown, reset custom input
             const sel = document.getElementById('edit-frame-category');
             const inp = document.getElementById('edit-frame-category-custom');
+            const wrap = document.getElementById('edit-new-cat-wrap');
             if (_categories.includes(category)) {
                 sel.value = category;
-                inp.style.display = 'none';
+                inp.value = '';
+                wrap.style.display = 'none';
             } else {
-                sel.value = '__custom__';
+                // Category not in list — show it in custom input
                 inp.value = category;
-                inp.style.display = 'block';
+                wrap.style.display = 'block';
             }
             document.getElementById('edit-frame-modal').classList.add('show');
         }
