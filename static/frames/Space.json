@@ -37,5 +37,6 @@
       "y": 903
     }
   ],
-  "display_name": "Space"
+  "display_name": "Space",
+  "is_private": false
 }

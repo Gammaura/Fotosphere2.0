@@ -1113,6 +1113,54 @@ async def admin_upload_frame(
     }
 
 
+@app.put("/api/admin/frames/{filename}")
+async def admin_edit_frame(filename: str, request: Request, _=Depends(require_admin)):
+    """Edit frame metadata (name, category) without re-uploading the file."""
+    body = await request.json()
+    new_name = body.get("name", "").strip()
+    new_category = body.get("category", "").strip() or "Other"
+
+    if not new_name:
+        raise HTTPException(400, "Name is required")
+
+    updated = False
+    for t_dir in ["static/frames", "static/custom_frames"]:
+        path = os.path.join(t_dir, filename)
+        if os.path.exists(path):
+            json_path = os.path.splitext(path)[0] + ".json"
+            data = {}
+            if os.path.exists(json_path):
+                try:
+                    with open(json_path, 'r') as f:
+                        data = json.load(f)
+                except:
+                    pass
+            data["display_name"] = new_name
+            data["category"] = new_category
+            with open(json_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            updated = True
+
+            # Also update Supabase DB
+            is_private = data.get("is_private", False)
+            try:
+                if is_private or t_dir == "static/custom_frames":
+                    db_upsert_custom_frame(filename, new_name, data.get("slots", []), "")
+                else:
+                    db_upsert_frame(filename, new_name, data.get("slots", []), "")
+            except Exception as e:
+                print(f"Supabase frame update warning: {e}")
+            break
+
+    if not updated:
+        raise HTTPException(404, "Frame not found")
+
+    # Invalidate thumb cache for this frame
+    if filename in _thumb_cache:
+        del _thumb_cache[filename]
+
+    return {"success": True, "name": new_name, "category": new_category}
+
 @app.delete("/api/admin/frames/{filename}")
 def admin_delete_frame(filename: str, _=Depends(require_admin)):
     # Try deleting from both directories

@@ -37,5 +37,6 @@
       "y": 902
     }
   ],
-  "display_name": "Cinema"
+  "display_name": "Cinema",
+  "is_private": false
 }

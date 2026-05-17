@@ -37,5 +37,6 @@
       "y": 903
     }
   ],
-  "display_name": "Barbie"
+  "display_name": "Barbie",
+  "is_private": false
 }

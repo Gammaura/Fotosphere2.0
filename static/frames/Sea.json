@@ -37,5 +37,6 @@
       "y": 903
     }
   ],
-  "display_name": "Sea"
+  "display_name": "Sea",
+  "is_private": false
 }

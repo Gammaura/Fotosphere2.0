@@ -8,148 +8,171 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
-            --light: #f8fafc;
+            --primary: #4680FF;
+            --primary-light: #eef2ff;
+            --primary-hover: #3b6de6;
+            --dark: #1c2025;
+            --dark-light: #262b30;
+            --light: #f4f7fe;
             --white: #ffffff;
-            --gray: #64748b;
-            --border: #e2e8f0;
-            --danger: #ef4444;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --radius-md: 12px;
-            --radius-lg: 20px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --gray: #5b6b79;
+            --gray-light: #8c98a4;
+            --border: #e6ebf1;
+            --danger: #dc2626;
+            --success: #2ca87f;
+            --warning: #e58a00;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+            --transition: all 0.2s ease;
+            --sidebar-bg: #fff;
+            --sidebar-text: #5b6b79;
+            --sidebar-active: #4680FF;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Outfit', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; overflow-x: hidden; }
-        
         .admin-layout { display: flex; height: 100vh; overflow: hidden; }
         
-        /* ═══ SIDEBAR ═══ */
-        .sidebar { 
-            width: 280px; background: var(--dark); color: var(--white); 
+        /* ═══ SIDEBAR (Able Pro Light) ═══ */
+        .sidebar {
+            width: 280px; background: var(--sidebar-bg); color: var(--sidebar-text);
             display: flex; flex-direction: column; flex-shrink: 0;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05); z-index: 20;
+            border-right: 1px solid var(--border); z-index: 20;
         }
         .sidebar-header {
-            padding: 2rem 1.5rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);
-            display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;
+            padding: 1.5rem 1.5rem 1rem; display: flex; align-items: center; gap: 12px;
         }
         .sidebar-header .logo-icon {
-            width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), #8b5cf6);
-            border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; font-weight: 900; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+            width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), #6366f1);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(70,128,255,0.3);
         }
-        .sidebar-header h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; line-height: 1.2; }
-        .sidebar-header h1 span { font-size: 0.75rem; color: #94a3b8; font-weight: 500; letter-spacing: 0; display: block; }
+        .sidebar-header h1 { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; line-height: 1.2; color: var(--dark); }
+        .sidebar-header h1 span { font-size: 0.7rem; color: var(--gray-light); font-weight: 500; letter-spacing: 0; display: block; margin-top: 2px; }
+
+        .sidebar-user {
+            margin: 0.5rem 1rem 1rem; padding: 0.8rem 1rem; background: var(--light); border-radius: var(--radius-md);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-user .su-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #4680FF, #6366f1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 0.85rem; }
+        .sidebar-user .su-info { font-size: 0.85rem; font-weight: 700; color: var(--dark); line-height: 1.3; }
+        .sidebar-user .su-info small { display: block; font-size: 0.7rem; color: var(--gray-light); font-weight: 500; }
+
+        .sidebar-section-label { padding: 1.2rem 1.5rem 0.5rem; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-light); }
         
-        .sidebar-menu { flex: 1; padding: 0 1rem; overflow-y: auto; }
-        .sidebar-menu::-webkit-scrollbar { width: 4px; }
-        .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar-menu { flex: 1; padding: 0 0.75rem; overflow-y: auto; }
+        .sidebar-menu::-webkit-scrollbar { width: 3px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
         
         .tab {
-            display: flex; align-items: center; gap: 12px; width: 100%; padding: 1rem 1.2rem;
-            margin-bottom: 0.5rem; border-radius: var(--radius-md); border: none;
-            background: transparent; color: #cbd5e1; font-weight: 600; font-size: 0.95rem;
+            display: flex; align-items: center; gap: 10px; width: 100%; padding: 0.7rem 1rem;
+            margin-bottom: 2px; border-radius: 8px; border: none;
+            background: transparent; color: var(--sidebar-text); font-weight: 500; font-size: 0.9rem;
             text-align: left; cursor: pointer; transition: var(--transition); font-family: inherit;
         }
-        .tab i { font-size: 1.1rem; width: 24px; text-align: center; }
-        .tab:hover:not(.act) { background: rgba(255,255,255,0.05); color: var(--white); transform: translateX(5px); }
-        .tab.act { background: var(--primary); color: var(--white); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .tab i { font-size: 1rem; width: 22px; text-align: center; opacity: 0.8; }
+        .tab:hover:not(.act) { background: var(--primary-light); color: var(--primary); }
+        .tab.act { background: var(--primary-light); color: var(--primary); font-weight: 700; }
+        .tab.act i { opacity: 1; }
         
-        .sidebar-footer { padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
         .sidebar-footer a {
-            display: flex; align-items: center; gap: 10px; color: #94a3b8; text-decoration: none;
+            display: flex; align-items: center; gap: 10px; color: var(--gray-light); text-decoration: none;
             font-size: 0.85rem; font-weight: 600; transition: var(--transition);
         }
-        .sidebar-footer a:hover { color: var(--white); }
+        .sidebar-footer a:hover { color: var(--primary); }
 
         /* ═══ MAIN CONTENT ═══ */
-        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; }
+        .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--light); }
         
         .topbar {
-            background: var(--white); padding: 1.2rem 2.5rem; display: flex; align-items: center; justify-content: space-between;
-            box-shadow: var(--shadow-sm); z-index: 10;
+            background: var(--white); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border); z-index: 10;
         }
-        .topbar h2 { font-size: 1.4rem; font-weight: 800; color: var(--dark); }
-        .user-badge { display: flex; align-items: center; gap: 10px; background: #f1f5f9; padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; color: var(--dark); }
-        .user-badge .avatar { width: 30px; height: 30px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; }
+        .topbar h2 { font-size: 1.2rem; font-weight: 700; color: var(--dark); }
+        .topbar-breadcrumb { font-size: 0.75rem; color: var(--gray-light); margin-top: 2px; }
+        .user-badge { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.85rem; color: var(--gray); }
+        .user-badge .avatar { width: 34px; height: 34px; background: linear-gradient(135deg, var(--primary), #6366f1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; font-weight: 800; }
         
-        .scroll-content { flex: 1; overflow-y: auto; padding: 2.5rem; }
-        .panel { display: none; animation: fadeIn 0.4s ease; }
+        .scroll-content { flex: 1; overflow-y: auto; padding: 1.5rem 2rem; }
+        .panel { display: none; animation: fadeIn 0.3s ease; }
         .panel.act { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         
         /* ═══ CARDS ═══ */
-        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 2rem; margin-bottom: 2rem; border: 1px solid var(--border); }
-        .card-title { font-size: 1.15rem; font-weight: 800; color: var(--dark); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid var(--border); }
+        .card-title { font-size: 1rem; font-weight: 700; color: var(--dark); margin-bottom: 1.2rem; display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
         
         /* ═══ FORMS & BUTTONS ═══ */
-        .upload-form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; background: #f8fafc; padding: 1.5rem; border-radius: var(--radius-md); border: 1px dashed #cbd5e1; }
+        .upload-form { display: flex; gap: 1.2rem; align-items: flex-end; flex-wrap: wrap; background: var(--white); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border); }
         .field { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 0.8rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
-        input[type=text], input[type=number], input[type=password], select { padding: 0.8rem 1rem; border: 1px solid #cbd5e1; border-radius: var(--radius-md); font-family: inherit; font-weight: 600; font-size: 0.95rem; color: var(--dark); background: var(--white); transition: var(--transition); }
-        input[type=text]:focus, input[type=number]:focus, input[type=password]:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        label { font-size: 0.75rem; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type=text], input[type=number], input[type=password], select { padding: 0.65rem 0.9rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-weight: 500; font-size: 0.9rem; color: var(--dark); background: var(--white); transition: var(--transition); }
+        input[type=text]:focus, input[type=number]:focus, input[type=password]:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(70,128,255,0.12); }
         input[type=file] { font-size: 0.85rem; font-family: inherit; padding: 0.5rem 0; }
-        input[type=file]::file-selector-button { background: #e2e8f0; border: none; padding: 0.6rem 1rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: var(--transition); margin-right: 1rem; font-family: inherit; }
-        input[type=file]::file-selector-button:hover { background: #cbd5e1; }
+        input[type=file]::file-selector-button { background: var(--primary-light); color: var(--primary); border: none; padding: 0.55rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition); margin-right: 0.8rem; font-family: inherit; }
+        input[type=file]::file-selector-button:hover { background: #dde4ff; }
         
-        .btn { background: var(--dark); color: var(--white); border: none; padding: 0.8rem 1.5rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: var(--transition); font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow-sm); }
-        .btn:hover { background: var(--dark-light); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn { background: var(--primary); color: var(--white); border: none; padding: 0.65rem 1.3rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: var(--transition); font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(70,128,255,0.25); }
         .btn:active { transform: translateY(0); }
         .btn-primary { background: var(--primary); }
         .btn-primary:hover { background: var(--primary-hover); }
-        .btn-danger { background: #fee2e2; color: var(--danger); box-shadow: none; }
-        .btn-danger:hover { background: #fecaca; }
-        .btn-green { background: #dcfce7; color: var(--success); box-shadow: none; }
-        .btn-green:hover { background: #bbf7d0; }
-        .btn-sm { padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px; }
+        .btn-secondary { background: var(--white); color: var(--dark); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--light); box-shadow: none; }
+        .btn-danger { background: #fff1f2; color: var(--danger); }
+        .btn-danger:hover { background: #fee2e2; box-shadow: none; }
+        .btn-green { background: #ecfdf5; color: var(--success); }
+        .btn-green:hover { background: #d1fae5; box-shadow: none; }
+        .btn-sm { padding: 0.45rem 0.9rem; font-size: 0.8rem; border-radius: 6px; }
         
         /* ═══ TABLES ═══ */
-        .table-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
         table { width: 100%; border-collapse: collapse; background: var(--white); }
-        th, td { text-align: left; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; white-space: nowrap; }
-        th { background: #f8fafc; font-weight: 800; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; font-size: 0.75rem; }
+        th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; white-space: nowrap; }
+        th { background: var(--light); font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.8px; font-size: 0.7rem; }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #f8fafc; }
+        tr:hover td { background: #fafbfd; }
         
         /* ═══ GRID ITEMS ═══ */
-        .frame-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; }
-        .frame-item { background: var(--white); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); text-align: center; position: relative; transition: var(--transition); box-shadow: var(--shadow-sm); }
-        .frame-item:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: #cbd5e1; }
-        .frame-item img { width: 100%; aspect-ratio: 9/16; object-fit: cover; background: #f1f5f9; }
-        .frame-item-info { padding: 1rem; font-size: 0.9rem; font-weight: 800; color: var(--dark); border-top: 1px solid var(--border); }
-        .frame-item-info span { display: block; font-size: 0.75rem; color: var(--gray); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .frame-item-del { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--white); color: var(--danger); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); box-shadow: var(--shadow-sm); }
+        .frame-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1.2rem; }
+        .frame-item { background: var(--white); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); text-align: center; position: relative; transition: var(--transition); }
+        .frame-item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .frame-item img { width: 100%; aspect-ratio: 9/16; object-fit: cover; background: var(--light); }
+        .frame-item-info { padding: 0.8rem; font-size: 0.85rem; font-weight: 700; color: var(--dark); border-top: 1px solid var(--border); }
+        .frame-item-info span { display: block; font-size: 0.7rem; color: var(--gray-light); font-weight: 500; margin-top: 3px; }
+        .frame-item-del { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: var(--white); color: var(--danger); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); box-shadow: var(--shadow-sm); font-size: 0.75rem; }
         .frame-item-del:hover { background: var(--danger); color: var(--white); border-color: var(--danger); }
         
         /* ═══ UTILS ═══ */
-        .badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge-green { background: #dcfce7; color: var(--success); }
-        .badge-orange { background: #ffedd5; color: #ea580c; }
-        .badge-gray { background: #f1f5f9; color: var(--gray); }
-        .empty { text-align: center; color: var(--gray); padding: 4rem 2rem; font-size: 1rem; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-        .empty::before { content: '📁'; font-size: 3rem; opacity: 0.5; }
-        .gen-code { font-family: 'Courier New', Courier, monospace; font-size: 1.1rem; font-weight: 900; background: #f1f5f9; padding: 0.4rem 1rem; border-radius: 8px; letter-spacing: 2px; color: var(--primary); border: 1px dashed #cbd5e1; }
+        .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+        .badge-green { background: #ecfdf5; color: var(--success); }
+        .badge-orange { background: #fff7ed; color: var(--warning); }
+        .badge-gray { background: var(--light); color: var(--gray); }
+        .empty { text-align: center; color: var(--gray-light); padding: 3rem 2rem; font-size: 0.9rem; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+        .empty::before { content: '📁'; font-size: 2.5rem; opacity: 0.4; }
+        .gen-code { font-family: 'Courier New', monospace; font-size: 1rem; font-weight: 800; background: var(--primary-light); padding: 0.3rem 0.8rem; border-radius: 6px; letter-spacing: 2px; color: var(--primary); }
+        .voucher-row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
         
         /* ═══ MODAL ═══ */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.25s ease; }
         .modal-overlay.show { display: flex; opacity: 1; }
-        .modal-box { background: var(--white); border-radius: var(--radius-lg); padding: 2.5rem; width: 90%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-box { background: var(--white); border-radius: var(--radius-lg); padding: 2rem; width: 90%; max-width: 400px; text-align: center; box-shadow: var(--shadow-lg); transform: translateY(16px) scale(0.97); transition: all 0.25s ease; }
         .modal-overlay.show .modal-box { transform: translateY(0) scale(1); }
-        .modal-icon { font-size: 3.5rem; margin-bottom: 1rem; }
-        .modal-title { font-size: 1.4rem; font-weight: 900; margin-bottom: 0.8rem; color: var(--dark); }
-        .modal-text { font-size: 0.95rem; color: var(--gray); margin-bottom: 2rem; line-height: 1.6; white-space: pre-wrap; font-weight: 500; }
-        .modal-wa-btn { background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 1rem 1.5rem; border-radius: var(--radius-md); font-weight: 800; text-decoration: none; margin-bottom: 1rem; transition: var(--transition); font-size: 1rem; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
-        .modal-wa-btn:hover { background: #128C7E; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4); }
-        .modal-close { background: #f1f5f9; color: var(--gray); border: none; width: 100%; padding: 1rem; border-radius: var(--radius-md); font-weight: 800; font-family: inherit; cursor: pointer; font-size: 0.95rem; transition: var(--transition); }
-        .modal-close:hover { background: #e2e8f0; color: var(--dark); }
+        .modal-icon { font-size: 3rem; margin-bottom: 0.8rem; }
+        .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 0.6rem; color: var(--dark); }
+        .modal-text { font-size: 0.9rem; color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6; white-space: pre-wrap; font-weight: 500; }
+        .modal-wa-btn { background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0.8rem 1.2rem; border-radius: 8px; font-weight: 700; text-decoration: none; margin-bottom: 0.8rem; transition: var(--transition); font-size: 0.9rem; }
+        .modal-wa-btn:hover { background: #128C7E; }
+        .modal-close { background: var(--light); color: var(--gray); border: none; width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 0.9rem; transition: var(--transition); }
+        .modal-close:hover { background: var(--border); color: var(--dark); }
+        .frame-item-edit { position: absolute; top: 8px; right: 42px; width: 28px; height: 28px; border-radius: 50%; background: var(--white); color: var(--primary); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); box-shadow: var(--shadow-sm); font-size: 0.75rem; }
+        .frame-item-edit:hover { background: var(--primary); color: var(--white); border-color: var(--primary); }
+        .edit-modal-field { margin-bottom: 1rem; text-align: left; }
+        .edit-modal-field label { display: block; margin-bottom: 6px; }
+        .edit-modal-field input { width: 100%; }
     </style>
 </head>
 <body>
@@ -157,16 +180,26 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-icon">F</div>
-                <h1>Fotosphere<span>ADMIN DASHBOARD</span></h1>
+                <h1>Fotosphere<span>v2.0 Dashboard</span></h1>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="su-avatar">A</div>
+                <div class="su-info">Admin<small>Administrator</small></div>
             </div>
             
             <div class="sidebar-menu">
+                <div class="sidebar-section-label">Frames</div>
                 <button class="tab act" onclick="switchTab('frames',this)"><i>🖼️</i> Public Frames</button>
                 <button class="tab" onclick="switchTab('custom-frames',this)"><i>🔒</i> Custom Frames</button>
+
+                <div class="sidebar-section-label">Management</div>
                 <button class="tab" onclick="switchTab('vouchers',this)"><i>🎟️</i> Vouchers</button>
                 <button class="tab" onclick="switchTab('tickets',this)"><i>🎫</i> Tickets</button>
                 <button class="tab" onclick="switchTab('payments',this)"><i>💳</i> Payments</button>
                 <button class="tab" onclick="switchTab('photos',this)"><i>📸</i> Photos</button>
+
+                <div class="sidebar-section-label">System</div>
                 <button class="tab" onclick="switchTab('settings',this)"><i>⚙️</i> Settings</button>
             </div>
             
@@ -177,10 +210,12 @@
         
         <div class="content-area">
             <div class="topbar">
-                <h2 id="topbar-title">Dashboard Overview</h2>
+                <div>
+                    <h2 id="topbar-title">Public Frames</h2>
+                    <div class="topbar-breadcrumb">Dashboard / <span id="topbar-breadcrumb-page">Frames</span></div>
+                </div>
                 <div class="user-badge">
                     <div class="avatar">A</div>
-                    Admin User
                 </div>
             </div>
             
@@ -369,6 +404,27 @@
         </div>
     </div>
 
+    <!-- Edit Frame Modal -->
+    <div class="modal-overlay" id="edit-frame-modal">
+        <div class="modal-box">
+            <div class="modal-icon">✏️</div>
+            <div class="modal-title">Edit Frame</div>
+            <input type="hidden" id="edit-frame-file">
+            <div class="edit-modal-field">
+                <label>Nama Frame</label>
+                <input type="text" id="edit-frame-name" placeholder="Nama frame">
+            </div>
+            <div class="edit-modal-field">
+                <label>Kategori</label>
+                <input type="text" id="edit-frame-category" placeholder="Kategori">
+            </div>
+            <div style="display:flex;gap:10px;margin-top:1.5rem">
+                <button class="btn btn-primary" style="flex:1" onclick="saveFrameEdit()">💾 Simpan</button>
+                <button class="modal-close" style="flex:1" onclick="closeEditModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let _allFrames = [];
 
@@ -397,7 +453,9 @@
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('act'));
             if(el) {
                 el.classList.add('act');
-                document.getElementById('topbar-title').innerText = el.innerText.replace(/[^\x00-\x7F]/g, "").trim(); // Remove emojis
+                const label = el.innerText.replace(/[^\x00-\x7F]/g, "").trim();
+                document.getElementById('topbar-title').innerText = label;
+                document.getElementById('topbar-breadcrumb-page').innerText = label;
             }
             document.getElementById('panel-' + name).classList.add('act');
             if (name === 'frames' || name === 'custom-frames') loadFrames();
@@ -440,6 +498,7 @@
             else {
                 gPub.innerHTML = pubFrames.map(f => `
                     <div class="frame-item">
+                        <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(f.category||'Other').replace(/'/g,"\\'")}')">✎</button>
                         <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
                         <img src="/frames/${f.file}" alt="${f.name}">
                         <div class="frame-item-info">${f.name} · ${f.photos} foto<br><span style="color:#888;font-size:0.6rem">${f.category||'Other'}</span></div>
@@ -451,6 +510,7 @@
             else {
                 gPriv.innerHTML = privFrames.map(f => `
                     <div class="frame-item" style="border: 2px solid #ffcc80;">
+                        <button class="frame-item-edit" onclick="openEditModal('${f.file}','${f.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(f.category||'Other').replace(/'/g,"\\'")}')">✎</button>
                         <button class="frame-item-del" onclick="deleteFrame('${f.file}')">✕</button>
                         <img src="/custom_frames/${f.file}" alt="${f.name}">
                         <div class="frame-item-info" style="color:#e65100">${f.name} · ${f.photos} foto<br><span style="font-size:0.6rem">🔒 Private</span></div>
@@ -517,9 +577,38 @@
             loadFrames();
         }
 
+        function openEditModal(file, name, category) {
+            document.getElementById('edit-frame-file').value = file;
+            document.getElementById('edit-frame-name').value = name;
+            document.getElementById('edit-frame-category').value = category;
+            document.getElementById('edit-frame-modal').classList.add('show');
+        }
+        function closeEditModal() {
+            document.getElementById('edit-frame-modal').classList.remove('show');
+        }
+        async function saveFrameEdit() {
+            const file = document.getElementById('edit-frame-file').value;
+            const name = document.getElementById('edit-frame-name').value.trim();
+            const category = document.getElementById('edit-frame-category').value.trim() || 'Other';
+            if (!name) return alert('Nama tidak boleh kosong');
+            const r = await fetch('/api/admin/frames/' + file, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ name, category })
+            });
+            if (r.ok) {
+                closeEditModal();
+                showAdminModal('Berhasil!', `Frame berhasil diupdate.\nNama: ${name}\nKategori: ${category}`, null, '✅');
+                _allFrames = [];
+                loadFrames();
+            } else {
+                alert('Gagal mengupdate frame');
+            }
+        }
+
         async function deleteFrame(fname) {
             if (!confirm('Hapus frame ' + fname + '?')) return;
             await fetch('/api/admin/frames/' + fname, { method: 'DELETE' });
+            _allFrames = [];
             loadFrames();
         }
 
