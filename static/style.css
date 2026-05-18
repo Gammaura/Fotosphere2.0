@@ -39,7 +39,7 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none;transition:al
 
 /* ═══ HOME ═══ */
 #screen-home{background:var(--bg)}
-.home-logo{width:72px;border-radius:50%;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.home-logo{width:72px}
 .home-brand{font-size:2.4rem;font-weight:900;letter-spacing:6px;margin-top:.5rem}
 .home-sub{font-size:.75rem;color:var(--muted);letter-spacing:3px}
 .home-tag{font-size:.7rem;color:var(--muted);font-style:italic}
