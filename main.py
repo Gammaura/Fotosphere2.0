@@ -151,7 +151,9 @@ def startup_sync():
             print(f"Voucher migration warning: {e}")
 
     try:
-        VOUCHER_CODES = sync_vouchers_from_db()
+        synced = sync_vouchers_from_db()
+        if synced or not VOUCHER_CODES:
+            VOUCHER_CODES = synced
         print(f"Loaded {len(VOUCHER_CODES)} vouchers from Supabase")
     except Exception as e:
         print(f"Voucher load error: {e}")
@@ -170,7 +172,9 @@ def startup_sync():
             print(f"Ticket migration warning: {e}")
 
     try:
-        TICKET_CODES = sync_tickets_from_db()
+        synced = sync_tickets_from_db()
+        if synced or not TICKET_CODES:
+            TICKET_CODES = synced
         print(f"Loaded {len(TICKET_CODES)} tickets from Supabase")
     except Exception as e:
         print(f"Ticket load error: {e}")
@@ -420,7 +424,7 @@ async def api_claim_voucher(request: Request):
                 v = VOUCHER_CODES[code]
                 if v.get("uses_left", 0) > 0:
                     session_id = str(uuid.uuid4())
-                    order_id = f"VOUCHER-{code}"
+                    order_id = f"VOUCHER-{code}-{session_id[:8]}"
                     
                     try:
                         create_session(session_id, order_id)
@@ -448,7 +452,7 @@ async def api_claim_voucher(request: Request):
                 t = TICKET_CODES[code]
                 if t.get("uses_left", 0) > 0:
                     session_id = str(uuid.uuid4())
-                    order_id = f"TICKET-{code}"
+                    order_id = f"TICKET-{code}-{session_id[:8]}"
                     try:
                         create_session(session_id, order_id)
                     except Exception as db_err:
@@ -1035,7 +1039,7 @@ async def api_validate_ticket(request: Request):
                 t = TICKET_CODES[code]
                 if t.get("uses_left", 0) > 0:
                     session_id = str(uuid.uuid4())
-                    order_id = f"TICKET-{code}"
+                    order_id = f"TICKET-{code}-{session_id[:8]}"
                     try:
                         create_session(session_id, order_id)
                     except Exception as e:
@@ -1257,7 +1261,9 @@ def admin_photos(sync: bool = False, _=Depends(require_admin)):
 @app.get("/api/admin/vouchers")
 def admin_vouchers(_=Depends(require_admin)):
     global VOUCHER_CODES
-    VOUCHER_CODES = sync_vouchers_from_db()
+    synced = sync_vouchers_from_db()
+    if synced or not VOUCHER_CODES:
+        VOUCHER_CODES = synced
     return VOUCHER_CODES
 
 @app.post("/api/admin/vouchers")
@@ -1298,7 +1304,9 @@ def admin_delete_voucher(code: str, _=Depends(require_admin)):
 @app.get("/api/admin/tickets")
 def admin_tickets(_=Depends(require_admin)):
     global TICKET_CODES
-    TICKET_CODES = sync_tickets_from_db()
+    synced = sync_tickets_from_db()
+    if synced or not TICKET_CODES:
+        TICKET_CODES = synced
     return TICKET_CODES
 
 @app.post("/api/admin/tickets")
