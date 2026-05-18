@@ -3,7 +3,7 @@
 (function(){const h=(window.innerHeight-80)+'px',w=(window.innerWidth-80)+'px';document.documentElement.style.setProperty('--init-h',h);document.documentElement.style.setProperty('--init-w',w)})();
 function showModal(t,s,i='✨'){document.getElementById('modal-title').innerText=t;document.getElementById('modal-sub').innerText=s;document.getElementById('modal-icon').innerText=i;document.getElementById('overlay-modal').style.display='flex'}
 function hideModal(){document.getElementById('overlay-modal').style.display='none'}
-const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:true,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[],qrisPrice:30000};
+const S={sid:null,oid:null,frames:[],filters:[],categories:{},frame:null,filter:'Natural',emoji:'Original',photos:[],max:1,slot:0,mirror:true,stream:null,timerSec:3,livePhoto:true,stripUrl:'',gifUrl:'',liveClips:[],photoUrls:[],liveUrls:[],qrisPrice:5000};
 let _idleT=null,_idleLimit=120000; // 2 min idle auto-return
 function resetIdle(){if(_idleT)clearTimeout(_idleT);_idleT=setTimeout(()=>{const cur=document.querySelector('.screen.active');if(cur&&(cur.id==='screen-paymethod'||cur.id==='screen-qris'||cur.id==='screen-voucher'||cur.id==='screen-ticket')){goHome();showModal('Sesi Idle','Kembali ke halaman utama karena tidak ada aktivitas','⏳')}},_idleLimit)}
 ['click','touchstart','keydown'].forEach(e=>document.addEventListener(e,resetIdle,{passive:true}));
@@ -105,7 +105,7 @@ function stopTicketScan(){if(_scanner){try{_scanner.stop().catch(()=>{})}catch(_
 // QRIS
 let _pT=null,_pP=null;
 function clearPay(){if(_pT){clearInterval(_pT);_pT=null}if(_pP){clearInterval(_pP);_pP=null}}
-async function goQRIS(){loader('MEMPERSIAPKAN PEMBAYARAN...');try{const r=await fetch('/api/payment/create',{method:'POST'});if(!r.ok)throw new Error('err');const d=await r.json();S.sid=d.session_id;S.oid=d.order_id;$('qr-box').innerHTML=`<img src="data:image/png;base64,${d.qr_b64}">`;noloader();show('qris');_pP=setInterval(async()=>{try{const r2=await fetch('/api/payment/status/'+S.oid);const d2=await r2.json();if(d2.status==='paid'){clearPay();showSuccess('Pembayaran Berhasil','Terima Kasih',{method:'QRIS',order:S.oid,total:'IDR 30.000'},()=>{startTimer();goToFrame()})}}catch(_){}},3000)}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}}
+async function goQRIS(){loader('MEMPERSIAPKAN PEMBAYARAN...');try{const r=await fetch('/api/payment/create',{method:'POST'});if(!r.ok)throw new Error('err');const d=await r.json();S.sid=d.session_id;S.oid=d.order_id;$('qr-box').innerHTML=`<img src="data:image/png;base64,${d.qr_b64}">`;noloader();show('qris');_pP=setInterval(async()=>{try{const r2=await fetch('/api/payment/status/'+S.oid);const d2=await r2.json();if(d2.status==='paid'){clearPay();showSuccess('Pembayaran Berhasil','Terima Kasih',{method:'QRIS',order:S.oid,total:'IDR 5.000'},()=>{startTimer();goToFrame()})}}catch(_){}},3000)}catch(e){noloader();showModal('Gagal',e.message,'⚠️')}}
 
 // Voucher
 function goVoucher(){show('voucher');$('voucher-input').value=''}

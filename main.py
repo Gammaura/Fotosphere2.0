@@ -65,7 +65,7 @@ os.makedirs("static/frames", exist_ok=True)
 os.makedirs("static/custom_frames", exist_ok=True)
 
 # ── App Configuration ─────────────────────────────────────
-QRIS_PRICE = int(os.environ.get("QRIS_PRICE", "30000"))
+QRIS_PRICE = int(os.environ.get("QRIS_PRICE", "5000"))
 
 # In-memory stores (ephemeral — session photos only)
 SESSION_STORE = {} # session_id -> {"photos": [], "timestamp": datetime, ...}
