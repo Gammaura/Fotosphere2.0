@@ -464,12 +464,25 @@ def upload_local_payments_to_supabase(payments_list: list):
     except Exception as e:
         print(f"Payment migration error: {e}")
 
+def _derive_method_from_order_id(order_id: str) -> str:
+    """Derive payment method from order_id prefix as fallback."""
+    if not order_id:
+        return "-"
+    oid = order_id.upper()
+    if oid.startswith("VOUCHER-"):
+        return "Voucher"
+    elif oid.startswith("TICKET-"):
+        return "Ticket"
+    elif oid.startswith("FOTOBOX-"):
+        return "QRIS"
+    return "-"
+
 def db_get_photo_history(limit: int = 100) -> list:
     """Get completed sessions as photo history."""
     sb = get_supabase()
     res = (
         sb.table("sessions")
-        .select("id, frame_choice, filter_choice, photo_urls, strip_url, created_at")
+        .select("id, midtrans_order_id, frame_choice, filter_choice, photo_urls, strip_url, created_at")
         .eq("status", "completed")
         .not_.is_("strip_url", "null")
         .order("created_at", desc=True)
@@ -489,6 +502,10 @@ def db_get_photo_history(limit: int = 100) -> list:
 
     results = []
     for item in res.data or []:
+        # Try payments table first, fallback to deriving from order_id
+        method = payment_map.get(item["id"])
+        if not method or method in ("-", "Unknown"):
+            method = _derive_method_from_order_id(item.get("midtrans_order_id", ""))
         results.append({
             "session_id": item["id"],
             "frame": item.get("frame_choice", "Unknown"),
@@ -496,6 +513,6 @@ def db_get_photo_history(limit: int = 100) -> list:
             "photos": len(item.get("photo_urls", []) or []),
             "strip_url": item.get("strip_url", ""),
             "created_at": item.get("created_at", ""),
-            "method": payment_map.get(item["id"], "-")
+            "method": method
         })
     return results
